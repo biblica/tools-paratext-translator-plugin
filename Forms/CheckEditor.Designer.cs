@@ -84,18 +84,20 @@ namespace TvpMain.Forms
             // idLabel
             // 
             this.idLabel.AutoSize = true;
-            this.idLabel.Location = new System.Drawing.Point(6, 20);
+            this.idLabel.Location = new System.Drawing.Point(8, 25);
+            this.idLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.idLabel.Name = "idLabel";
-            this.idLabel.Size = new System.Drawing.Size(21, 13);
+            this.idLabel.Size = new System.Drawing.Size(23, 16);
             this.idLabel.TabIndex = 0;
             this.idLabel.Text = "ID:";
             // 
             // checkFixIdLabel
             // 
             this.checkFixIdLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.checkFixIdLabel.Location = new System.Drawing.Point(33, 16);
+            this.checkFixIdLabel.Location = new System.Drawing.Point(44, 19);
+            this.checkFixIdLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.checkFixIdLabel.Name = "checkFixIdLabel";
-            this.checkFixIdLabel.Size = new System.Drawing.Size(406, 20);
+            this.checkFixIdLabel.Size = new System.Drawing.Size(389, 22);
             this.checkFixIdLabel.TabIndex = 1;
             this.checkFixIdLabel.Text = "label1";
             this.checkFixIdLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -104,18 +106,20 @@ namespace TvpMain.Forms
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(6, 43);
+            this.label1.Location = new System.Drawing.Point(8, 53);
+            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(90, 13);
+            this.label1.Size = new System.Drawing.Size(109, 16);
             this.label1.TabIndex = 2;
             this.label1.Text = "Check/Fix Name:";
             // 
             // checkFixNameTextBox
             // 
             this.checkFixNameTextBox.BackColor = System.Drawing.Color.LightYellow;
-            this.checkFixNameTextBox.Location = new System.Drawing.Point(145, 40);
+            this.checkFixNameTextBox.Location = new System.Drawing.Point(193, 49);
+            this.checkFixNameTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.checkFixNameTextBox.Name = "checkFixNameTextBox";
-            this.checkFixNameTextBox.Size = new System.Drawing.Size(294, 20);
+            this.checkFixNameTextBox.Size = new System.Drawing.Size(240, 22);
             this.checkFixNameTextBox.TabIndex = 3;
             this.checkFixNameTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.checkFixNameTextBox.MouseEnter += new System.EventHandler(this.CheckFixNameTextBox_MouseEnter);
@@ -131,9 +135,11 @@ namespace TvpMain.Forms
             this.groupBox2.Controls.Add(this.label4);
             this.groupBox2.Controls.Add(this.label3);
             this.groupBox2.Controls.Add(this.checkFindRegExTextBox);
-            this.groupBox2.Location = new System.Drawing.Point(13, 37);
+            this.groupBox2.Location = new System.Drawing.Point(17, 46);
+            this.groupBox2.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(1164, 675);
+            this.groupBox2.Padding = new System.Windows.Forms.Padding(4);
+            this.groupBox2.Size = new System.Drawing.Size(502, 507);
             this.groupBox2.TabIndex = 3;
             this.groupBox2.TabStop = false;
             // 
@@ -143,9 +149,11 @@ namespace TvpMain.Forms
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.jsEditor.Lexer = ScintillaNET.Lexer.Cpp;
-            this.jsEditor.Location = new System.Drawing.Point(9, 92);
+            this.jsEditor.Location = new System.Drawing.Point(8, 113);
+            this.jsEditor.Margin = new System.Windows.Forms.Padding(4);
             this.jsEditor.Name = "jsEditor";
-            this.jsEditor.Size = new System.Drawing.Size(1147, 577);
+            this.jsEditor.ScrollWidth = 1000;
+            this.jsEditor.Size = new System.Drawing.Size(486, 386);
             this.jsEditor.TabIndex = 6;
             this.jsEditor.CharAdded += new System.EventHandler<ScintillaNET.CharAddedEventArgs>(this.JsEditor_CharAdded);
             this.jsEditor.TextChanged += new System.EventHandler(this.JsEditor_TextChanged);
@@ -154,9 +162,10 @@ namespace TvpMain.Forms
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(6, 69);
+            this.label5.Location = new System.Drawing.Point(8, 90);
+            this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(57, 13);
+            this.label5.Size = new System.Drawing.Size(71, 16);
             this.label5.TabIndex = 5;
             this.label5.Text = "JavaScript";
             // 
@@ -164,9 +173,10 @@ namespace TvpMain.Forms
             // 
             this.fixRegExTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.fixRegExTextBox.Location = new System.Drawing.Point(116, 43);
+            this.fixRegExTextBox.Location = new System.Drawing.Point(155, 53);
+            this.fixRegExTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.fixRegExTextBox.Name = "fixRegExTextBox";
-            this.fixRegExTextBox.Size = new System.Drawing.Size(1040, 20);
+            this.fixRegExTextBox.Size = new System.Drawing.Size(339, 22);
             this.fixRegExTextBox.TabIndex = 3;
             this.fixRegExTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.fixRegExTextBox.MouseEnter += new System.EventHandler(this.FixRegExTextBox_MouseEnter);
@@ -174,18 +184,20 @@ namespace TvpMain.Forms
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(6, 46);
+            this.label4.Location = new System.Drawing.Point(8, 56);
+            this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(101, 13);
+            this.label4.Size = new System.Drawing.Size(126, 16);
             this.label4.TabIndex = 2;
             this.label4.Text = "Fix Replace RegEx:";
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(6, 20);
+            this.label3.Location = new System.Drawing.Point(8, 25);
+            this.label3.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(99, 13);
+            this.label3.Size = new System.Drawing.Size(121, 16);
             this.label3.TabIndex = 1;
             this.label3.Text = "Check Find RegEx:";
             // 
@@ -193,9 +205,10 @@ namespace TvpMain.Forms
             // 
             this.checkFindRegExTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.checkFindRegExTextBox.Location = new System.Drawing.Point(116, 16);
+            this.checkFindRegExTextBox.Location = new System.Drawing.Point(155, 20);
+            this.checkFindRegExTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.checkFindRegExTextBox.Name = "checkFindRegExTextBox";
-            this.checkFindRegExTextBox.Size = new System.Drawing.Size(1040, 20);
+            this.checkFindRegExTextBox.Size = new System.Drawing.Size(339, 22);
             this.checkFindRegExTextBox.TabIndex = 0;
             this.checkFindRegExTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.checkFindRegExTextBox.MouseEnter += new System.EventHandler(this.CheckFindRegExTextBox_MouseEnter);
@@ -203,9 +216,10 @@ namespace TvpMain.Forms
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 69);
+            this.label2.Location = new System.Drawing.Point(8, 85);
+            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(45, 13);
+            this.label2.Size = new System.Drawing.Size(56, 16);
             this.label2.TabIndex = 4;
             this.label2.Text = "Version:";
             // 
@@ -218,9 +232,10 @@ namespace TvpMain.Forms
             "BOOK",
             "CHAPTER",
             "VERSE"});
-            this.scopeCombo.Location = new System.Drawing.Point(145, 92);
+            this.scopeCombo.Location = new System.Drawing.Point(193, 113);
+            this.scopeCombo.Margin = new System.Windows.Forms.Padding(4);
             this.scopeCombo.Name = "scopeCombo";
-            this.scopeCombo.Size = new System.Drawing.Size(294, 21);
+            this.scopeCombo.Size = new System.Drawing.Size(240, 24);
             this.scopeCombo.TabIndex = 6;
             this.scopeCombo.MouseEnter += new System.EventHandler(this.ScopeCombo_MouseEnter);
             // 
@@ -244,19 +259,22 @@ namespace TvpMain.Forms
             this.groupBox3.Controls.Add(this.label6);
             this.groupBox3.Controls.Add(this.scopeCombo);
             this.groupBox3.Controls.Add(this.label2);
-            this.groupBox3.Location = new System.Drawing.Point(1183, 37);
+            this.groupBox3.Location = new System.Drawing.Point(527, 46);
+            this.groupBox3.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(445, 675);
+            this.groupBox3.Padding = new System.Windows.Forms.Padding(4);
+            this.groupBox3.Size = new System.Drawing.Size(441, 507);
             this.groupBox3.TabIndex = 7;
             this.groupBox3.TabStop = false;
             // 
             // versionTextBox
             // 
             this.versionTextBox.BackColor = System.Drawing.Color.LightYellow;
-            this.versionTextBox.Location = new System.Drawing.Point(145, 66);
+            this.versionTextBox.Location = new System.Drawing.Point(193, 81);
+            this.versionTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.versionTextBox.Mask = "0.0.0.0";
             this.versionTextBox.Name = "versionTextBox";
-            this.versionTextBox.Size = new System.Drawing.Size(294, 20);
+            this.versionTextBox.Size = new System.Drawing.Size(240, 22);
             this.versionTextBox.TabIndex = 16;
             this.versionTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.versionTextBox.MouseEnter += new System.EventHandler(this.VersionTextBox_MouseEnter);
@@ -264,9 +282,10 @@ namespace TvpMain.Forms
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(6, 197);
+            this.label10.Location = new System.Drawing.Point(8, 254);
+            this.label10.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(60, 13);
+            this.label10.Size = new System.Drawing.Size(75, 16);
             this.label10.TabIndex = 15;
             this.label10.Text = "Description";
             // 
@@ -277,11 +296,12 @@ namespace TvpMain.Forms
             this.descriptionTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.descriptionTextBox.Location = new System.Drawing.Point(6, 224);
+            this.descriptionTextBox.Location = new System.Drawing.Point(8, 276);
+            this.descriptionTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.descriptionTextBox.Multiline = true;
             this.descriptionTextBox.Name = "descriptionTextBox";
             this.descriptionTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.descriptionTextBox.Size = new System.Drawing.Size(430, 445);
+            this.descriptionTextBox.Size = new System.Drawing.Size(425, 223);
             this.descriptionTextBox.TabIndex = 14;
             this.descriptionTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.descriptionTextBox.MouseEnter += new System.EventHandler(this.DescriptionTextBox_MouseEnter);
@@ -289,17 +309,19 @@ namespace TvpMain.Forms
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(6, 174);
+            this.label9.Location = new System.Drawing.Point(8, 214);
+            this.label9.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(34, 13);
+            this.label9.Size = new System.Drawing.Size(42, 16);
             this.label9.TabIndex = 13;
             this.label9.Text = "Tags:";
             // 
             // tagsTextBox
             // 
-            this.tagsTextBox.Location = new System.Drawing.Point(145, 171);
+            this.tagsTextBox.Location = new System.Drawing.Point(193, 210);
+            this.tagsTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.tagsTextBox.Name = "tagsTextBox";
-            this.tagsTextBox.Size = new System.Drawing.Size(294, 20);
+            this.tagsTextBox.Size = new System.Drawing.Size(240, 22);
             this.tagsTextBox.TabIndex = 12;
             this.tagsTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.tagsTextBox.MouseEnter += new System.EventHandler(this.TagsTextBox_MouseEnter);
@@ -307,17 +329,19 @@ namespace TvpMain.Forms
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(6, 148);
+            this.label8.Location = new System.Drawing.Point(8, 182);
+            this.label8.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(63, 13);
+            this.label8.Size = new System.Drawing.Size(78, 16);
             this.label8.TabIndex = 11;
             this.label8.Text = "Languages:";
             // 
             // languagesTextBox
             // 
-            this.languagesTextBox.Location = new System.Drawing.Point(145, 145);
+            this.languagesTextBox.Location = new System.Drawing.Point(193, 178);
+            this.languagesTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.languagesTextBox.Name = "languagesTextBox";
-            this.languagesTextBox.Size = new System.Drawing.Size(294, 20);
+            this.languagesTextBox.Size = new System.Drawing.Size(240, 22);
             this.languagesTextBox.TabIndex = 10;
             this.languagesTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.languagesTextBox.MouseEnter += new System.EventHandler(this.LanguagesTextBox_MouseEnter);
@@ -325,9 +349,10 @@ namespace TvpMain.Forms
             // defaultDescTextBox
             // 
             this.defaultDescTextBox.BackColor = System.Drawing.Color.LightYellow;
-            this.defaultDescTextBox.Location = new System.Drawing.Point(145, 119);
+            this.defaultDescTextBox.Location = new System.Drawing.Point(193, 146);
+            this.defaultDescTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.defaultDescTextBox.Name = "defaultDescTextBox";
-            this.defaultDescTextBox.Size = new System.Drawing.Size(294, 20);
+            this.defaultDescTextBox.Size = new System.Drawing.Size(240, 22);
             this.defaultDescTextBox.TabIndex = 9;
             this.defaultDescTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.defaultDescTextBox.MouseEnter += new System.EventHandler(this.DefaultDescTextBox_MouseEnter);
@@ -335,18 +360,20 @@ namespace TvpMain.Forms
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(6, 122);
+            this.label7.Location = new System.Drawing.Point(8, 150);
+            this.label7.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(133, 13);
+            this.label7.Size = new System.Drawing.Size(164, 16);
             this.label7.TabIndex = 8;
             this.label7.Text = "Default Result Description:";
             // 
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(6, 95);
+            this.label6.Location = new System.Drawing.Point(8, 117);
+            this.label6.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(41, 13);
+            this.label6.Size = new System.Drawing.Size(50, 16);
             this.label6.TabIndex = 7;
             this.label6.Text = "Scope:";
             // 
@@ -355,21 +382,23 @@ namespace TvpMain.Forms
             this.helpTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.helpTextBox.BackColor = System.Drawing.Color.PaleGoldenrod;
-            this.helpTextBox.Location = new System.Drawing.Point(12, 718);
+            this.helpTextBox.Location = new System.Drawing.Point(16, 560);
+            this.helpTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.helpTextBox.Multiline = true;
             this.helpTextBox.Name = "helpTextBox";
-            this.helpTextBox.Size = new System.Drawing.Size(1616, 74);
+            this.helpTextBox.Size = new System.Drawing.Size(951, 90);
             this.helpTextBox.TabIndex = 8;
             // 
             // menuStrip
             // 
+            this.menuStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.fileToolStripMenuItem,
             this.saveIconToolStripMenuItem,
             this.helpToolStripMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
-            this.menuStrip.Size = new System.Drawing.Size(1640, 34);
+            this.menuStrip.Size = new System.Drawing.Size(985, 38);
             this.menuStrip.TabIndex = 13;
             this.menuStrip.Text = "menuStrip";
             // 
@@ -384,7 +413,7 @@ namespace TvpMain.Forms
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             this.fileToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F)));
             this.fileToolStripMenuItem.ShowShortcutKeys = false;
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 30);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(46, 34);
             this.fileToolStripMenuItem.Text = "&File";
             // 
             // newToolStripMenuItem
@@ -392,7 +421,7 @@ namespace TvpMain.Forms
             this.newToolStripMenuItem.Name = "newToolStripMenuItem";
             this.newToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
             this.newToolStripMenuItem.ShowShortcutKeys = false;
-            this.newToolStripMenuItem.Size = new System.Drawing.Size(106, 22);
+            this.newToolStripMenuItem.Size = new System.Drawing.Size(130, 26);
             this.newToolStripMenuItem.Text = "&New";
             this.newToolStripMenuItem.Click += new System.EventHandler(this.NewToolStripMenuItem_Click);
             // 
@@ -401,7 +430,7 @@ namespace TvpMain.Forms
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
             this.openToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
             this.openToolStripMenuItem.ShowShortcutKeys = false;
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(106, 22);
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(130, 26);
             this.openToolStripMenuItem.Text = "&Open";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.OpenToolStripMenuItem_Click);
             // 
@@ -410,7 +439,7 @@ namespace TvpMain.Forms
             this.saveToolStripMenuItem.Name = "saveToolStripMenuItem";
             this.saveToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
             this.saveToolStripMenuItem.ShowShortcutKeys = false;
-            this.saveToolStripMenuItem.Size = new System.Drawing.Size(106, 22);
+            this.saveToolStripMenuItem.Size = new System.Drawing.Size(130, 26);
             this.saveToolStripMenuItem.Text = "&Save";
             this.saveToolStripMenuItem.Click += new System.EventHandler(this.SaveToolStripMenuItem_Click);
             // 
@@ -419,7 +448,7 @@ namespace TvpMain.Forms
             this.publishToolStripMenuItem.Name = "publishToolStripMenuItem";
             this.publishToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.P)));
             this.publishToolStripMenuItem.ShowShortcutKeys = false;
-            this.publishToolStripMenuItem.Size = new System.Drawing.Size(106, 22);
+            this.publishToolStripMenuItem.Size = new System.Drawing.Size(130, 26);
             this.publishToolStripMenuItem.Text = "&Publish";
             this.publishToolStripMenuItem.Click += new System.EventHandler(this.PublishToolStripMenuItem_Click);
             // 
@@ -428,7 +457,7 @@ namespace TvpMain.Forms
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             this.exitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.X)));
             this.exitToolStripMenuItem.ShowShortcutKeys = false;
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(106, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(130, 26);
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItem_Click);
             // 
@@ -445,7 +474,7 @@ namespace TvpMain.Forms
             this.saveIconToolStripMenuItem.ShortcutKeyDisplayString = "Ctlr+S";
             this.saveIconToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
             this.saveIconToolStripMenuItem.ShowShortcutKeys = false;
-            this.saveIconToolStripMenuItem.Size = new System.Drawing.Size(20, 25);
+            this.saveIconToolStripMenuItem.Size = new System.Drawing.Size(24, 29);
             this.saveIconToolStripMenuItem.Text = "saveIconMenuItem";
             this.saveIconToolStripMenuItem.ToolTipText = "Ctrl+S";
             this.saveIconToolStripMenuItem.Click += new System.EventHandler(this.SaveToolStripMenuItem_Click);
@@ -456,20 +485,20 @@ namespace TvpMain.Forms
             this.contactSupportToolStripMenuItem,
             this.licenseToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 30);
+            this.helpToolStripMenuItem.Size = new System.Drawing.Size(55, 34);
             this.helpToolStripMenuItem.Text = "Help";
             // 
             // contactSupportToolStripMenuItem
             // 
             this.contactSupportToolStripMenuItem.Name = "contactSupportToolStripMenuItem";
-            this.contactSupportToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.contactSupportToolStripMenuItem.Size = new System.Drawing.Size(200, 26);
             this.contactSupportToolStripMenuItem.Text = "Contact Support";
             this.contactSupportToolStripMenuItem.Click += new System.EventHandler(this.contactSupportToolStripMenuItem_Click);
             // 
             // licenseToolStripMenuItem
             // 
             this.licenseToolStripMenuItem.Name = "licenseToolStripMenuItem";
-            this.licenseToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.licenseToolStripMenuItem.Size = new System.Drawing.Size(200, 26);
             this.licenseToolStripMenuItem.Text = "License";
             this.licenseToolStripMenuItem.Click += new System.EventHandler(this.LicenseToolStripMenuItem_Click);
             // 
@@ -480,14 +509,15 @@ namespace TvpMain.Forms
             // 
             // CheckEditor
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1640, 804);
+            this.ClientSize = new System.Drawing.Size(985, 666);
             this.Controls.Add(this.helpTextBox);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.menuStrip);
             this.MainMenuStrip = this.menuStrip;
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "CheckEditor";
