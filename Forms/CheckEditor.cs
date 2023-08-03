@@ -280,7 +280,7 @@ namespace TvpMain.Forms
             var found = false;
 
             foreach (var checkAndFixItem in remoteChecks.Where(checkAndFixItem =>
-                checkAndFixItem.Name.Equals(_checkAndFixItem.Name) && checkAndFixItem.Version.Equals(_checkAndFixItem.Version)))
+                checkAndFixItem.Id.Equals(_checkAndFixItem.Id) && checkAndFixItem.Version.Equals(_checkAndFixItem.Version)))
             {
                 found = true;
             }
