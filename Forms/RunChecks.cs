@@ -270,6 +270,7 @@ namespace TvpMain.Forms
                 ));
 
                 // add all the known remote checks
+                _remoteChecks.Sort((x, y) => x.Name.CompareTo(y.Name));
                 foreach (var item in _remoteChecks)
                 {
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
@@ -340,7 +341,7 @@ namespace TvpMain.Forms
                     displayItem.Tags,
                     displayItem.Id
                 );
-
+                checksList.Rows[rowIndex].Selected = displayItem.Selected;
                 checksList.Rows[rowIndex].Tag = displayItem;
 
                 // Whether a check is local
@@ -373,8 +374,6 @@ namespace TvpMain.Forms
                 checksList.Rows[rowIndex].DefaultCellStyle.ForeColor = SystemColors.GrayText;
             }
 
-            // deselect the first row
-            checksList.ClearSelection();
             checksList.Enabled = true;
         }
 
@@ -736,32 +735,6 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
-        /// Change the selected value for the check, if it's to be in the set
-        /// </summary>
-        /// <param name="sender">The control that sent this event</param>
-        /// <param name="eventArgs">The event information that triggered this call</param>
-        private void ChecksList_CellClick(object sender, DataGridViewCellEventArgs eventArgs)
-        {
-            if (eventArgs.RowIndex < 0
-                || eventArgs.ColumnIndex > 0)
-            {
-                return;
-            }
-
-            var displayItem = (DisplayItem) checksList.Rows[eventArgs.RowIndex].Tag;
-            if (!displayItem.Active)
-            {
-                return;
-            }
-
-            var checkCell = (DataGridViewCheckBoxCell) checksList.Rows[eventArgs.RowIndex].Cells[0];
-            var itemSelected = !(bool) checkCell.Value;
-
-            checkCell.Value = itemSelected;
-            displayItem.Selected = itemSelected;
-        }
-
-        /// <summary>
         /// Utility method to determine if the specified check can be run on this project
         ///  Will filter out based on language
         ///  Will filter out based on Tags, add additional tag support here
@@ -843,8 +816,6 @@ namespace TvpMain.Forms
 
             helpTextBox.AppendText("Check/Fix: " + item.Name + Environment.NewLine);
             helpTextBox.AppendText(item.Description);
-
-            checksList.Rows[e.RowIndex].Selected = false;
         }
 
         /// <summary>
@@ -994,9 +965,7 @@ namespace TvpMain.Forms
                 : _checkManager.GetInstalledChecksDirectory();
 
             // Get the file location for the selected check
-            var fileName = _checkManager.GetCheckAndFixItemFilename(
-                name,
-                selectedCheck.Version);
+            var fileName = _checkManager.GetCheckAndFixItemFilename(selectedCheck.Item);
             var fullPath = Path.Combine(checkDir, fileName);
 
             // Open the CheckEditor with the selected check
@@ -1058,6 +1027,7 @@ namespace TvpMain.Forms
                 PrepForSync();
                 StartCheckSynchronization();
             };
+            Enabled = false;
             worker.RunWorkerAsync();
         }
 
@@ -1068,7 +1038,6 @@ namespace TvpMain.Forms
         /// <param name="e"></param>
         private void connectWorker_DoWork(object sender, DoWorkEventArgs e)
         {
-            Enabled = false;
             HostUtil.Instance.TryGoOnline();
         }
 
@@ -1161,39 +1130,228 @@ namespace TvpMain.Forms
             tryToConnectButton.Visible = !HostUtil.Instance.IsOnline;
             refreshButton.Enabled = HostUtil.Instance.IsOnline;
         }
-    }
 
-    /// <summary>
-    /// Used for displaying the check/fix items
-    /// This is used so that we can remember if the item is
-    /// selected or not during search/filtering
-    /// </summary>
-    public class DisplayItem
-    {
-        public bool Selected { get; set; }
-        public string Name { get; }
-        public string Description { get; }
-        public string Version { get; }
-        public string Languages { get; }
-        public string Tags { get; }
-        public string Id { get; }
-        public bool Active { get; }
-        public string Tooltip { get; }
-        public CheckAndFixItem Item { get; }
-
-        public DisplayItem(bool selected, string name, string description, string version, string languages,
-            string tags, string id, bool active, string tooltip, CheckAndFixItem item)
+        /// <summary>
+        /// Handles when a user clicks the "Delete" context menu option.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Selected = selected;
-            Name = name;
-            Description = description;
-            Version = version;
-            Languages = languages;
-            Tags = tags;
-            Id = id;
-            Active = active;
-            Tooltip = tooltip;
-            Item = item;
+            deleteSelectedRows();
+        }
+
+        /// <summary>
+        /// Deletes the currently selected rows in the checks list DataGridView.
+        /// </summary>
+        private void deleteSelectedRows()
+        {
+            if (checksList.SelectedRows.Count > 0)
+            {
+                if (confirmDeleteSelectedRows())
+                {
+                    foreach (DataGridViewRow row in checksList.SelectedRows)
+                    {
+                        deleteChecksListItem(row.Index);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Deletes a row in the DataGridView. Also deletes any corresponding xml files.
+        /// </summary>
+        /// <param name="rowIndex">Index of the row to delete.</param>
+        private void deleteChecksListItem(int rowIndex)
+        {
+            DisplayItem displayItem = (DisplayItem) checksList.Rows[rowIndex].Tag;
+            CheckAndFixItem checkItem = displayItem.Item;
+            if (_localChecks.Contains(checkItem))
+            {
+                _checkManager.DeleteCheckAndFixItem(checkItem);
+                _localChecks.Remove(checkItem);
+            }
+            else if (_remoteChecks.Contains(checkItem))
+            {
+                _checkManager.UnpublishAndUninstallCheckAndFixItem(checkItem);
+                _remoteChecks.Remove(checkItem);
+            }
+            checksList.Rows.RemoveAt(rowIndex);
+
+        }
+
+        /// <summary>
+        /// Checks to see if invalid checks are selected.
+        /// </summary>
+        /// <param name="dataGridView">The data grid to check.</param>
+        /// <returns>True if invalid checks are selected. False otherwise. </returns>
+        private bool inactiveChecksAreSelected(DataGridView dataGridView)
+        {
+            foreach (DataGridViewRow row in dataGridView.Rows)
+            {
+                if (row.Selected && row.Tag != null)
+                {
+                    var rowData = (DisplayItem) row.Tag;
+                    if (!rowData.Active)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Shows a dialog box to confirm deletion of any selected rows. 
+        /// </summary>
+        /// <returns>Returns true if the user confirms deletion. False otherwise.</returns>
+        private bool confirmDeleteSelectedRows()
+        {
+            string dialogCaption = "Confirm Delete";
+            bool firstItem = true;
+            string itemList = "";
+            foreach (DataGridViewRow row in checksList.SelectedRows)
+            {
+                string itemName = row.Cells["CFName"].Value.ToString();
+                //string itemType = row.Cells["TypeColumn"].Value.ToString();
+                string separator = firstItem ? "" : ", ";
+                itemList += separator + "\"" + itemName + "\"";
+                firstItem = false;
+            }
+            string dialogTextFormat = "Delete the following items?" + Environment.NewLine + Environment.NewLine + "{0}";
+            string dialogText = String.Format(dialogTextFormat, itemList);
+            DialogResult result = MessageBox.Show(dialogText, dialogCaption, MessageBoxButtons.YesNo);
+
+            return result == DialogResult.Yes;
+        }
+
+        /// <summary>
+        /// Triggers row deletion when the delete key is pressed.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void checksList_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyValue == 46 && checksList.SelectedRows.Count > 0)
+            {
+                e.Handled = true;
+                if (!AllSelectedRowsAreDeletable())
+                {
+                    MessageBox.Show("Built-in checks cannot be deleted. Unselect any built-in checks and try again.");
+                } else
+                {
+                    deleteSelectedRows();
+                }
+            }
+        }
+
+        /// <summary>
+        /// When a row is selected or deselected:
+        /// - set the Selected check box to the same value.
+        /// - disable the run checks button if an invalid check is selected
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void checksList_RowStateChanged(object sender, DataGridViewRowStateChangedEventArgs e)
+        {
+            if (e.StateChanged == DataGridViewElementStates.Selected)
+            {
+                if (e.Row.Tag != null)
+                {
+                    var rowData = (DisplayItem)e.Row.Tag;
+                    rowData.Selected = e.Row.Selected;
+                }
+                e.Row.Cells["CFSelected"].Value = e.Row.Selected;
+
+                runChecksButton.Enabled = !inactiveChecksAreSelected(e.Row.DataGridView);
+            }
+        }
+
+        /// <summary>
+        /// Handles right mouse button clicks.
+        /// - When an unselected row is right clicked, select it and unselect all other rows.
+        /// - If an item row is right-clicked enable the context menu.
+        /// - Disable the delete option if none of the selected rows are deleteable
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void checksList_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            DataGridView dataGridView = sender as DataGridView;
+            if (e.RowIndex != -1 && e.Button == MouseButtons.Right)
+            {
+                // When an unselected row is right clicked, select it and unselect all other rows.
+                DataGridViewRow row = dataGridView.Rows[e.RowIndex];
+                if (!row.Selected)
+                {
+                    row.DataGridView.ClearSelection();
+                    row.DataGridView.CurrentCell = row.Cells["CFSelected"];
+                    row.Selected = true;
+                }
+
+                // If a data row is right clicked enable the context menu.
+                checksList.ContextMenuStrip = checksListContextMenu;
+
+                // Disable the delete option on the context menu if any selected rows are not deleteable
+                if (!AllSelectedRowsAreDeletable())
+                {
+                    deleteContextMenuItem.Enabled = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Disable the checks list context menu.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void checksList_CellMouseUp(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            checksList.ContextMenuStrip = null;
+        }
+
+        /// <summary>
+        /// Checks whether a row in the checks list is deletable.
+        /// </summary>
+        /// <param name="row">The row to check</param>
+        /// <returns>true if the row is deletable. false otherwise.</returns>
+        private bool RowIsDeletable(DataGridViewRow row)
+        {
+            var item = row.Tag as DisplayItem;
+            if (item == null || item.Name.StartsWith(BUILTIN_CHECKS_PREFIX))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Verify whether all selected rows in the checks list are deletable.
+        /// </summary>
+        /// <returns>true if all selected rows are deletable. false otherwise.</returns>
+        private bool AllSelectedRowsAreDeletable()
+        {
+            foreach (DataGridViewRow row in checksList.Rows)
+            {
+                if (row.Selected && !RowIsDeletable(row))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Reenable disabled menu items when the context menu closes.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void checksListContextMenu_Closed(object sender, ToolStripDropDownClosedEventArgs e)
+        {
+            deleteContextMenuItem.Enabled = true;
         }
     }
 }

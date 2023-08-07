@@ -124,6 +124,11 @@ namespace TvpMain.Check
         [XmlArrayItem("Tag", Type = typeof(string), IsNullable = false)]
         [XmlArray("Tags")]
         public string[] Tags { get; set; }
+        /// <summary>
+        /// The name of the file that the check was loaded from, if applicable.
+        /// </summary>
+        [XmlIgnore]
+        public string FileName { get; set; }
 
         //////////////// Serialization and Deserialization functions ///////////////////////
 
@@ -141,7 +146,6 @@ namespace TvpMain.Check
             var serializer = new XmlSerializer(typeof(CheckAndFixItem));
             using var xmlReader = new XmlTextReader(xmlFilePath);
             var obj = (CheckAndFixItem)serializer.Deserialize(xmlReader);
-
             return obj;
         }
 

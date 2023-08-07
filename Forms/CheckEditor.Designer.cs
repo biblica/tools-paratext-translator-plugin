@@ -236,7 +236,7 @@ namespace TvpMain.Forms
             this.scopeCombo.Margin = new System.Windows.Forms.Padding(4);
             this.scopeCombo.Name = "scopeCombo";
             this.scopeCombo.Size = new System.Drawing.Size(240, 24);
-            this.scopeCombo.TabIndex = 6;
+            this.scopeCombo.TabIndex = 9;
             this.scopeCombo.MouseEnter += new System.EventHandler(this.ScopeCombo_MouseEnter);
             // 
             // groupBox3
@@ -275,7 +275,7 @@ namespace TvpMain.Forms
             this.versionTextBox.Mask = "0.0.0.0";
             this.versionTextBox.Name = "versionTextBox";
             this.versionTextBox.Size = new System.Drawing.Size(240, 22);
-            this.versionTextBox.TabIndex = 16;
+            this.versionTextBox.TabIndex = 6;
             this.versionTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.versionTextBox.MouseEnter += new System.EventHandler(this.VersionTextBox_MouseEnter);
             // 
@@ -302,7 +302,7 @@ namespace TvpMain.Forms
             this.descriptionTextBox.Name = "descriptionTextBox";
             this.descriptionTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.descriptionTextBox.Size = new System.Drawing.Size(425, 223);
-            this.descriptionTextBox.TabIndex = 14;
+            this.descriptionTextBox.TabIndex = 21;
             this.descriptionTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.descriptionTextBox.MouseEnter += new System.EventHandler(this.DescriptionTextBox_MouseEnter);
             // 
@@ -322,7 +322,7 @@ namespace TvpMain.Forms
             this.tagsTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.tagsTextBox.Name = "tagsTextBox";
             this.tagsTextBox.Size = new System.Drawing.Size(240, 22);
-            this.tagsTextBox.TabIndex = 12;
+            this.tagsTextBox.TabIndex = 18;
             this.tagsTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.tagsTextBox.MouseEnter += new System.EventHandler(this.TagsTextBox_MouseEnter);
             // 
@@ -342,7 +342,7 @@ namespace TvpMain.Forms
             this.languagesTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.languagesTextBox.Name = "languagesTextBox";
             this.languagesTextBox.Size = new System.Drawing.Size(240, 22);
-            this.languagesTextBox.TabIndex = 10;
+            this.languagesTextBox.TabIndex = 15;
             this.languagesTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.languagesTextBox.MouseEnter += new System.EventHandler(this.LanguagesTextBox_MouseEnter);
             // 
@@ -353,7 +353,7 @@ namespace TvpMain.Forms
             this.defaultDescTextBox.Margin = new System.Windows.Forms.Padding(4);
             this.defaultDescTextBox.Name = "defaultDescTextBox";
             this.defaultDescTextBox.Size = new System.Drawing.Size(240, 22);
-            this.defaultDescTextBox.TabIndex = 9;
+            this.defaultDescTextBox.TabIndex = 12;
             this.defaultDescTextBox.TextChanged += new System.EventHandler(this.Content_TextChanged);
             this.defaultDescTextBox.MouseEnter += new System.EventHandler(this.DefaultDescTextBox_MouseEnter);
             // 

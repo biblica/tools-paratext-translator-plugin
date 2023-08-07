@@ -50,6 +50,12 @@ namespace TvpMain.CheckManagement
         public void PublishCheckAndFixItem(CheckAndFixItem item);
 
         /// <summary>
+        /// This method removes a <c>CheckAndFixItem</c> from the remote repository and uninstalls it locally.
+        /// </summary>
+        /// <param name="item">The <c>CheckAndFixItem</c> to unpublish and uninstall.</param>
+        public void UnpublishAndUninstallCheckAndFixItem(CheckAndFixItem item);
+
+        /// <summary>
         /// This method returns a list of locally-developed and saved <c>CheckAndFixItem</c>s.
         /// </summary>
         /// <returns>A list of saved <c>CheckAndFixItem</c>s.</returns>
@@ -82,9 +88,8 @@ namespace TvpMain.CheckManagement
         /// <summary>
         /// This method creates a filename for the provided <c>CheckAndFixItem</c>. 
         /// </summary>
-        /// <param name="name">The <c>CheckAndFixItem</c> name</param>
-        /// <param name="version">The <c>CheckAndFixItem</c> version</param>
+        /// <param name="item">The <c>CheckAndFixItem</c></param>
         /// <returns>The filename produced for the provided <c>CheckAndFixItem</c>.</returns>
-        public string GetCheckAndFixItemFilename(string name, string version);
+        public string GetCheckAndFixItemFilename(CheckAndFixItem item);
     }
 }

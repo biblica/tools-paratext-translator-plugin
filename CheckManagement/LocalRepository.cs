@@ -72,6 +72,7 @@ namespace TvpMain.CheckManagement
                 try
                 {
                     var checkAndFixItem = CheckAndFixItem.LoadFromXmlFile(checkFilePath);
+                    checkAndFixItem.FileName = Path.GetFileName(checkFilePath);
                     checkAndFixItems.Add(checkAndFixItem);
                 }
                 catch (Exception e)

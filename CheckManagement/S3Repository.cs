@@ -53,6 +53,7 @@ namespace TvpMain.CheckManagement
             {
                 using var fileStream = Service.GetFileStream(file);
                 var checkAndFixItem = ReadCheckAndFixItemFromStream(fileStream);
+                checkAndFixItem.FileName = Path.GetFileName(file);
                 if (checkAndFixItem != null) checkAndFixItems.Add(checkAndFixItem);
             }
 
