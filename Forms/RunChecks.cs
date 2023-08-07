@@ -1236,7 +1236,13 @@ namespace TvpMain.Forms
             if (e.KeyValue == 46 && checksList.SelectedRows.Count > 0)
             {
                 e.Handled = true;
-                deleteSelectedRows();
+                if (!AllSelectedRowsAreDeletable())
+                {
+                    MessageBox.Show("Built-in checks cannot be deleted. Unselect any built-in checks and try again.");
+                } else
+                {
+                    deleteSelectedRows();
+                }
             }
         }
 
@@ -1263,8 +1269,10 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
-        /// Handles row selection logic when a right mouse button is clicked.
-        /// When an unselected row is right clicked, select it and unselect all other rows.
+        /// Handles right mouse button clicks.
+        /// - When an unselected row is right clicked, select it and unselect all other rows.
+        /// - If an item row is right-clicked enable the context menu.
+        /// - Disable the delete option if none of the selected rows are deleteable
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
@@ -1273,6 +1281,7 @@ namespace TvpMain.Forms
             DataGridView dataGridView = sender as DataGridView;
             if (e.RowIndex != -1 && e.Button == MouseButtons.Right)
             {
+                // When an unselected row is right clicked, select it and unselect all other rows.
                 DataGridViewRow row = dataGridView.Rows[e.RowIndex];
                 if (!row.Selected)
                 {
@@ -1280,7 +1289,69 @@ namespace TvpMain.Forms
                     row.DataGridView.CurrentCell = row.Cells["CFSelected"];
                     row.Selected = true;
                 }
+
+                // If a data row is right clicked enable the context menu.
+                checksList.ContextMenuStrip = checksListContextMenu;
+
+                // Disable the delete option on the context menu if any selected rows are not deleteable
+                if (!AllSelectedRowsAreDeletable())
+                {
+                    deleteContextMenuItem.Enabled = false;
+                }
             }
+        }
+
+        /// <summary>
+        /// Disable the checks list context menu.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void checksList_CellMouseUp(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            checksList.ContextMenuStrip = null;
+        }
+
+        /// <summary>
+        /// Checks whether a row in the checks list is deletable.
+        /// </summary>
+        /// <param name="row">The row to check</param>
+        /// <returns>true if the row is deletable. false otherwise.</returns>
+        private bool RowIsDeletable(DataGridViewRow row)
+        {
+            var item = row.Tag as DisplayItem;
+            if (item == null || item.Name.StartsWith(BUILTIN_CHECKS_PREFIX))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Verify whether all selected rows in the checks list are deletable.
+        /// </summary>
+        /// <returns>true if all selected rows are deletable. false otherwise.</returns>
+        private bool AllSelectedRowsAreDeletable()
+        {
+            foreach (DataGridViewRow row in checksList.Rows)
+            {
+                if (row.Selected && !RowIsDeletable(row))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Reenable disabled menu items when the context menu closes.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void checksListContextMenu_Closed(object sender, ToolStripDropDownClosedEventArgs e)
+        {
+            deleteContextMenuItem.Enabled = true;
         }
     }
 }
