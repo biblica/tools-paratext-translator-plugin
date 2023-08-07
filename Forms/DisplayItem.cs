@@ -15,6 +15,7 @@ namespace TvpMain.Forms
     public class DisplayItem
     {
         public bool Selected { get; set; }
+        public string Location { get; set; }
         public string Name { get; }
         public string Description { get; }
         public string Version { get; }
@@ -25,10 +26,11 @@ namespace TvpMain.Forms
         public string Tooltip { get; }
         public CheckAndFixItem Item { get; }
 
-        public DisplayItem(bool selected, string name, string description, string version, string languages,
-            string tags, string id, bool active, string tooltip, CheckAndFixItem item)
+        public DisplayItem(bool selected, string location, string name, string description, string version, 
+            string languages, string tags, string id, bool active, string tooltip, CheckAndFixItem item)
         {
             Selected = selected;
+            Location = location;
             Name = name;
             Description = description;
             Version = version;

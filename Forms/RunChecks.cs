@@ -46,14 +46,19 @@ namespace TvpMain.Forms
         private const int MIN_SEARCH_CHARACTERS = 3;
 
         /// <summary>
-        /// Prefix for local checks constant.
+        /// Name of the repository where local checks are stored.
         /// </summary>
-        private const string LOCAL_CHECKS_PREFIX = "(Local)";
+        private const string LOCAL_CHECKS_LOCATION = "Local";
 
         /// <summary>
-        /// Prefix for local checks constant.
+        /// Name of the repository where built-in checks are stored.
         /// </summary>
-        private const string BUILTIN_CHECKS_PREFIX = "(Built-in)";
+        private const string BUILTIN_CHECKS_LOCATION = "Built-in";
+
+        /// <summary>
+        /// Name of the repository where remote checks are stored.
+        /// </summary>
+        private const string REMOTE_CHECKS_LOCATION = "Remote";
 
         /// <summary>
         /// Paratext host interface.
@@ -121,7 +126,7 @@ namespace TvpMain.Forms
         /// </summary>
         readonly CheckAndFixItem _scriptureReferenceCf = new CheckAndFixItem(
             MainConsts.V1_SCRIPTURE_REFERENCE_CHECK_GUID,
-            "(Built-in) Scripture Reference Verifications",
+            "Scripture Reference Verifications",
             "Scripture reference tag and formatting checks.",
             "2.0.0.0",
             CheckAndFixItem.CheckScope.VERSE);
@@ -130,7 +135,7 @@ namespace TvpMain.Forms
         /// This is a fixed CF for V1 TVP missing punctuation checking
         /// </summary>
         readonly CheckAndFixItem _missingPunctuationCf = new CheckAndFixItem(MainConsts.V1_PUNCTUATION_CHECK_GUID,
-            "(Built-in) Missing Punctuation Verifications",
+            "Missing Punctuation Verifications",
             "Searches for missing punctuation.",
             "2.0.0.0",
             CheckAndFixItem.CheckScope.VERSE);
@@ -225,7 +230,7 @@ namespace TvpMain.Forms
                         ? Enumerable.Empty<string>()
                         : _displayItems
                             .Where(foundItem => foundItem.Selected)
-                            .Select(foundItem => foundItem.Name))
+                            .Select(foundItem => foundItem.Id))
                     .ToImmutableHashSet();
 
                 // load all the checks into the list
@@ -237,8 +242,9 @@ namespace TvpMain.Forms
                 // get if the check is available (item1), and if not, the text for the tooltip (item2)
                 var isCheckAvailableTupleRef = IsCheckAvailableForProject(_scriptureReferenceCf);
                 _displayItems.Add(new DisplayItem(
-                    prevCheckedItems.Contains(_scriptureReferenceCf.Name) ||
+                    prevCheckedItems.Contains(_scriptureReferenceCf.Id) ||
                     IsCheckDefaultForProject(_scriptureReferenceCf),
+                    BUILTIN_CHECKS_LOCATION,
                     _scriptureReferenceCf.Name,
                     _scriptureReferenceCf.Description,
                     _scriptureReferenceCf.Version,
@@ -254,8 +260,9 @@ namespace TvpMain.Forms
 
                 var isCheckAvailableTuplePunc = IsCheckAvailableForProject(_missingPunctuationCf);
                 _displayItems.Add(new DisplayItem(
-                    prevCheckedItems.Contains(_missingPunctuationCf.Name) ||
+                    prevCheckedItems.Contains(_missingPunctuationCf.Id) ||
                     IsCheckDefaultForProject(_missingPunctuationCf),
+                    BUILTIN_CHECKS_LOCATION,
                     _missingPunctuationCf.Name,
                     _missingPunctuationCf.Description,
                     _missingPunctuationCf.Version,
@@ -276,7 +283,8 @@ namespace TvpMain.Forms
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
                     var isCheckAvailableTuple = IsCheckAvailableForProject(item);
                     _displayItems.Add(new DisplayItem(
-                        prevCheckedItems.Contains(item.Name) || IsCheckDefaultForProject(item),
+                        prevCheckedItems.Contains(item.Id) || IsCheckDefaultForProject(item),
+                        REMOTE_CHECKS_LOCATION,
                         item.Name,
                         item.Description,
                         item.Version,
@@ -294,10 +302,10 @@ namespace TvpMain.Forms
                 {
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
                     var isCheckAvailableTuple = IsCheckAvailableForProject(item);
-                    var localName = "(Local) " + item.Name;
                     _displayItems.Add(new DisplayItem(
-                        prevCheckedItems.Contains(localName) || false,
-                        localName,
+                        prevCheckedItems.Contains(item.Id) || false,
+                        LOCAL_CHECKS_LOCATION,
+                        item.Name,
                         item.Description,
                         item.Version,
                         item.Languages != null && item.Languages.Length > 0 ? string.Join(", ", item.Languages) : "All",
@@ -334,7 +342,7 @@ namespace TvpMain.Forms
                 }
 
                 var rowIndex = checksList.Rows.Add(
-                    displayItem.Selected,
+                    displayItem.Location,
                     displayItem.Name,
                     displayItem.Version,
                     displayItem.Languages,
@@ -345,8 +353,8 @@ namespace TvpMain.Forms
                 checksList.Rows[rowIndex].Tag = displayItem;
 
                 // Whether a check is local
-                var isLocal = displayItem.Name.StartsWith(LOCAL_CHECKS_PREFIX);
-                var isBuiltin = displayItem.Name.StartsWith(BUILTIN_CHECKS_PREFIX);
+                var isLocal = displayItem.Location == LOCAL_CHECKS_LOCATION;
+                var isBuiltin = displayItem.Location == BUILTIN_CHECKS_LOCATION;
 
                 // loop through all the cells in the row since tool tips can only be placed on the cell
                 for (var i = 0; i < checksList.Columns.Count; i++)
@@ -530,10 +538,9 @@ namespace TvpMain.Forms
             // grab the selected checks
             foreach (DataGridViewRow row in checksList.Rows)
             {
-                var item = ((DisplayItem) row.Tag).Item;
-                if ((bool) row.Cells[0].Value)
+                if (row.Selected)
                 {
-                    selectedChecks.Add(item);
+                    selectedChecks.Add(((DisplayItem)row.Tag).Item);
                 }
             }
 
@@ -689,7 +696,7 @@ namespace TvpMain.Forms
                 {
                     var item = (DisplayItem) checksList.Rows[row.Index].Tag;
 
-                    if ((bool) row.Cells[0].Value)
+                    if (row.Selected)
                     {
                         if (!_projectCheckSettings.DefaultCheckIds.Contains(item.Id))
                         {
@@ -745,7 +752,6 @@ namespace TvpMain.Forms
         {
             var languageId = _host.GetProjectLanguageId(_activeProjectName, "translation validation").ToUpper();
             var projectRtl = _host.GetProjectRtoL(_activeProjectName);
-            var builtInCheck = item.Name.StartsWith(BUILTIN_CHECKS_PREFIX);
 
             // filter based on language
             var languageEnabled = item.Languages == null
@@ -768,11 +774,6 @@ namespace TvpMain.Forms
 
 
             // set the response strings for the appropriate filter reason
-            if (builtInCheck)
-            {
-                filterReasons.Add("This check is built-in and cannot be edited.");
-            }
-
             if (!languageEnabled)
             {
                 filterReasons.Add("This check doesn't support this project's language.");
@@ -935,32 +936,28 @@ namespace TvpMain.Forms
         /// <param name="e"></param>
         private void ChecksList_EditCheck(object sender, DataGridViewCellEventArgs e)
         {
-            const string localCheckPrefix = "(Local)";
-            const string builtInCheckPrefix = "(Built-in)";
-
             // Get the check that was clicked
             var selectedCheck = _displayItems[e.RowIndex];
 
             var isTvpAdmin = _isCurrentUserTvpAdmin;
-            var isLocalCheck = selectedCheck.Name.StartsWith(localCheckPrefix);
-            var builtInCheck = selectedCheck.Name.StartsWith(builtInCheckPrefix);
+            var isLocal = selectedCheck.Location == LOCAL_CHECKS_LOCATION;
+            var isBuiltIn = selectedCheck.Location == BUILTIN_CHECKS_LOCATION;
 
             // Non-admins can only edit local checks
-            if (builtInCheck)
+            if (isBuiltIn)
             {
                 // Dialog box that shows if attempts to edit a built-in check
                 MessageBox.Show("Built-in checks are not able to be edited.", "Warning");
                 return;
             }
-            else if (!isLocalCheck && !isTvpAdmin)
+            else if (!isLocal && !isTvpAdmin)
             {
                 // Dialog box that shows if a user attempts to edit a check as a non-admin
                 MessageBox.Show("Only administrators can edit non-local checks.", "Warning");
                 return;
             }
 
-            var name = isLocalCheck ? selectedCheck.Name.Replace(localCheckPrefix, "") : selectedCheck.Name;
-            var checkDir = isLocalCheck
+            var checkDir = isLocal
                 ? _checkManager.GetLocalRepoDirectory()
                 : _checkManager.GetInstalledChecksDirectory();
 
@@ -969,7 +966,7 @@ namespace TvpMain.Forms
             var fullPath = Path.Combine(checkDir, fileName);
 
             // Open the CheckEditor with the selected check
-            new CheckEditor(new FileInfo(fullPath), !isLocalCheck).ShowDialog(this);
+            new CheckEditor(new FileInfo(fullPath), !isLocal).ShowDialog(this);
 
             UpdateDisplayItems();
         }
@@ -1262,7 +1259,6 @@ namespace TvpMain.Forms
                     var rowData = (DisplayItem)e.Row.Tag;
                     rowData.Selected = e.Row.Selected;
                 }
-                e.Row.Cells["CFSelected"].Value = e.Row.Selected;
 
                 runChecksButton.Enabled = !inactiveChecksAreSelected(e.Row.DataGridView);
             }
@@ -1286,7 +1282,7 @@ namespace TvpMain.Forms
                 if (!row.Selected)
                 {
                     row.DataGridView.ClearSelection();
-                    row.DataGridView.CurrentCell = row.Cells["CFSelected"];
+                    row.DataGridView.CurrentCell = row.Cells[0];
                     row.Selected = true;
                 }
 
@@ -1319,7 +1315,7 @@ namespace TvpMain.Forms
         private bool RowIsDeletable(DataGridViewRow row)
         {
             var item = row.Tag as DisplayItem;
-            if (item == null || item.Name.StartsWith(BUILTIN_CHECKS_PREFIX))
+            if (item == null || item.Location == BUILTIN_CHECKS_LOCATION)
             {
                 return false;
             }
