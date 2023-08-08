@@ -45,9 +45,12 @@ namespace TvpMain.Forms
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(RunChecks));
             this.runChecksMenu = new System.Windows.Forms.MenuStrip();
-            this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.editorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.newMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.newCheckMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.contactSupportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.licenseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -60,7 +63,14 @@ namespace TvpMain.Forms
             this.setDefaultsToSelected = new System.Windows.Forms.Button();
             this.resetToProjectDefaultsButton = new System.Windows.Forms.Button();
             this.checksList = new System.Windows.Forms.DataGridView();
+            this.CFLocation = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CFName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CFVersion = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CFLanguages = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CFTags = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CFId = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.checksListContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.editContextMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteContextMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.contextGroupBox = new System.Windows.Forms.GroupBox();
             this.toChapterLabel = new System.Windows.Forms.Label();
@@ -78,12 +88,6 @@ namespace TvpMain.Forms
             this.helpTextBox = new System.Windows.Forms.TextBox();
             this.projectNameText = new System.Windows.Forms.Label();
             this.runChecksTooltip = new System.Windows.Forms.ToolTip(this.components);
-            this.CFLocation = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.CFName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.CFVersion = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.CFLanguages = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.CFTags = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.CFId = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.runChecksMenu.SuspendLayout();
             this.checksGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.checksList)).BeginInit();
@@ -95,8 +99,8 @@ namespace TvpMain.Forms
             // 
             this.runChecksMenu.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.runChecksMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.fileToolStripMenuItem,
-            this.editorToolStripMenuItem,
+            this.fileMenuItem,
+            this.toolsToolStripMenuItem,
             this.helpToolStripMenuItem});
             this.runChecksMenu.Location = new System.Drawing.Point(13, 12);
             this.runChecksMenu.Name = "runChecksMenu";
@@ -104,27 +108,51 @@ namespace TvpMain.Forms
             this.runChecksMenu.TabIndex = 0;
             this.runChecksMenu.Text = "menuStrip1";
             // 
-            // fileToolStripMenuItem
+            // fileMenuItem
             // 
-            this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.exitToolStripMenuItem});
-            this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(46, 24);
-            this.fileToolStripMenuItem.Text = "File";
+            this.fileMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.newMenuItem,
+            this.exitMenuItem});
+            this.fileMenuItem.Name = "fileMenuItem";
+            this.fileMenuItem.Size = new System.Drawing.Size(46, 24);
+            this.fileMenuItem.Text = "File";
             // 
-            // exitToolStripMenuItem
+            // newMenuItem
             // 
-            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
-            this.exitToolStripMenuItem.Text = "E&xit";
-            this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItem_Click);
+            this.newMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.newCheckMenuItem});
+            this.newMenuItem.Name = "newMenuItem";
+            this.newMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.newMenuItem.Text = "New";
             // 
-            // editorToolStripMenuItem
+            // newCheckMenuItem
             // 
-            this.editorToolStripMenuItem.Name = "editorToolStripMenuItem";
-            this.editorToolStripMenuItem.Size = new System.Drawing.Size(63, 24);
-            this.editorToolStripMenuItem.Text = "Editor";
-            this.editorToolStripMenuItem.Click += new System.EventHandler(this.EditorToolStripMenuItem_Click);
+            this.newCheckMenuItem.Name = "newCheckMenuItem";
+            this.newCheckMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.newCheckMenuItem.Text = "Check...";
+            this.newCheckMenuItem.Click += new System.EventHandler(this.newCheckMenuItem_Click);
+            // 
+            // exitMenuItem
+            // 
+            this.exitMenuItem.Name = "exitMenuItem";
+            this.exitMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.exitMenuItem.Text = "E&xit";
+            this.exitMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItem_Click);
+            // 
+            // toolsToolStripMenuItem
+            // 
+            this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.optionsToolStripMenuItem});
+            this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
+            this.toolsToolStripMenuItem.Size = new System.Drawing.Size(58, 24);
+            this.toolsToolStripMenuItem.Text = "Tools";
+            // 
+            // optionsToolStripMenuItem
+            // 
+            this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
+            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(153, 26);
+            this.optionsToolStripMenuItem.Text = "Options...";
+            this.optionsToolStripMenuItem.Click += new System.EventHandler(this.optionsMenuItem_Click);
             // 
             // helpToolStripMenuItem
             // 
@@ -138,14 +166,14 @@ namespace TvpMain.Forms
             // contactSupportToolStripMenuItem
             // 
             this.contactSupportToolStripMenuItem.Name = "contactSupportToolStripMenuItem";
-            this.contactSupportToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.contactSupportToolStripMenuItem.Size = new System.Drawing.Size(200, 26);
             this.contactSupportToolStripMenuItem.Text = "Contact Support";
             this.contactSupportToolStripMenuItem.Click += new System.EventHandler(this.contactSupportToolStripMenuItem_Click);
             // 
             // licenseToolStripMenuItem
             // 
             this.licenseToolStripMenuItem.Name = "licenseToolStripMenuItem";
-            this.licenseToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.licenseToolStripMenuItem.Size = new System.Drawing.Size(200, 26);
             this.licenseToolStripMenuItem.Text = "License";
             this.licenseToolStripMenuItem.Click += new System.EventHandler(this.LicenseToolStripMenuItem_Click);
             // 
@@ -290,21 +318,87 @@ namespace TvpMain.Forms
             this.checksList.RowStateChanged += new System.Windows.Forms.DataGridViewRowStateChangedEventHandler(this.checksList_RowStateChanged);
             this.checksList.KeyDown += new System.Windows.Forms.KeyEventHandler(this.checksList_KeyDown);
             // 
+            // CFLocation
+            // 
+            this.CFLocation.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            this.CFLocation.DefaultCellStyle = dataGridViewCellStyle2;
+            this.CFLocation.HeaderText = "Location";
+            this.CFLocation.MinimumWidth = 6;
+            this.CFLocation.Name = "CFLocation";
+            this.CFLocation.ReadOnly = true;
+            this.CFLocation.Width = 99;
+            // 
+            // CFName
+            // 
+            this.CFName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.CFName.HeaderText = "Name";
+            this.CFName.MinimumWidth = 6;
+            this.CFName.Name = "CFName";
+            this.CFName.ReadOnly = true;
+            // 
+            // CFVersion
+            // 
+            this.CFVersion.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.CFVersion.FillWeight = 80F;
+            this.CFVersion.HeaderText = "Version";
+            this.CFVersion.MinimumWidth = 6;
+            this.CFVersion.Name = "CFVersion";
+            this.CFVersion.ReadOnly = true;
+            this.CFVersion.Width = 92;
+            // 
+            // CFLanguages
+            // 
+            this.CFLanguages.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.CFLanguages.FillWeight = 80F;
+            this.CFLanguages.HeaderText = "Languages";
+            this.CFLanguages.MinimumWidth = 70;
+            this.CFLanguages.Name = "CFLanguages";
+            this.CFLanguages.ReadOnly = true;
+            this.CFLanguages.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.CFLanguages.Width = 117;
+            // 
+            // CFTags
+            // 
+            this.CFTags.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.CFTags.FillWeight = 80F;
+            this.CFTags.HeaderText = "Tags";
+            this.CFTags.MinimumWidth = 70;
+            this.CFTags.Name = "CFTags";
+            this.CFTags.ReadOnly = true;
+            this.CFTags.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            // 
+            // CFId
+            // 
+            this.CFId.HeaderText = "Id";
+            this.CFId.MinimumWidth = 6;
+            this.CFId.Name = "CFId";
+            this.CFId.ReadOnly = true;
+            this.CFId.Visible = false;
+            // 
             // checksListContextMenu
             // 
             this.checksListContextMenu.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.checksListContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.editContextMenuItem,
             this.deleteContextMenuItem});
             this.checksListContextMenu.Name = "checksListContextMenuStrip";
-            this.checksListContextMenu.Size = new System.Drawing.Size(123, 28);
+            this.checksListContextMenu.Size = new System.Drawing.Size(211, 80);
             this.checksListContextMenu.Closed += new System.Windows.Forms.ToolStripDropDownClosedEventHandler(this.checksListContextMenu_Closed);
+            // 
+            // editContextMenuItem
+            // 
+            this.editContextMenuItem.Name = "editContextMenuItem";
+            this.editContextMenuItem.Size = new System.Drawing.Size(210, 24);
+            this.editContextMenuItem.Text = "Edit...";
+            this.editContextMenuItem.Click += new System.EventHandler(this.editContextMenuItem_Click);
             // 
             // deleteContextMenuItem
             // 
             this.deleteContextMenuItem.Name = "deleteContextMenuItem";
-            this.deleteContextMenuItem.Size = new System.Drawing.Size(122, 24);
+            this.deleteContextMenuItem.Size = new System.Drawing.Size(210, 24);
             this.deleteContextMenuItem.Text = "Delete";
-            this.deleteContextMenuItem.Click += new System.EventHandler(this.deleteToolStripMenuItem_Click);
+            this.deleteContextMenuItem.Click += new System.EventHandler(this.deleteContextMenuItem_Click);
             // 
             // contextGroupBox
             // 
@@ -507,64 +601,6 @@ namespace TvpMain.Forms
             // 
             this.runChecksTooltip.ShowAlways = true;
             // 
-            // CFLocation
-            // 
-            this.CFLocation.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
-            this.CFLocation.DefaultCellStyle = dataGridViewCellStyle2;
-            this.CFLocation.HeaderText = "Location";
-            this.CFLocation.MinimumWidth = 6;
-            this.CFLocation.Name = "CFLocation";
-            this.CFLocation.ReadOnly = true;
-            this.CFLocation.Width = 99;
-            // 
-            // CFName
-            // 
-            this.CFName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.CFName.HeaderText = "Name";
-            this.CFName.MinimumWidth = 6;
-            this.CFName.Name = "CFName";
-            this.CFName.ReadOnly = true;
-            // 
-            // CFVersion
-            // 
-            this.CFVersion.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.CFVersion.FillWeight = 80F;
-            this.CFVersion.HeaderText = "Version";
-            this.CFVersion.MinimumWidth = 6;
-            this.CFVersion.Name = "CFVersion";
-            this.CFVersion.ReadOnly = true;
-            this.CFVersion.Width = 92;
-            // 
-            // CFLanguages
-            // 
-            this.CFLanguages.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.CFLanguages.FillWeight = 80F;
-            this.CFLanguages.HeaderText = "Languages";
-            this.CFLanguages.MinimumWidth = 70;
-            this.CFLanguages.Name = "CFLanguages";
-            this.CFLanguages.ReadOnly = true;
-            this.CFLanguages.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.CFLanguages.Width = 117;
-            // 
-            // CFTags
-            // 
-            this.CFTags.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.CFTags.FillWeight = 80F;
-            this.CFTags.HeaderText = "Tags";
-            this.CFTags.MinimumWidth = 70;
-            this.CFTags.Name = "CFTags";
-            this.CFTags.ReadOnly = true;
-            this.CFTags.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            // 
-            // CFId
-            // 
-            this.CFId.HeaderText = "Id";
-            this.CFId.MinimumWidth = 6;
-            this.CFId.Name = "CFId";
-            this.CFId.ReadOnly = true;
-            this.CFId.Visible = false;
-            // 
             // RunChecks
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
@@ -610,8 +646,7 @@ namespace TvpMain.Forms
         #endregion
 
         private System.Windows.Forms.MenuStrip runChecksMenu;
-        private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem editorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem fileMenuItem;
         private System.Windows.Forms.Label projectLabel;
         private System.Windows.Forms.GroupBox checksGroupBox;
         private System.Windows.Forms.DataGridView checksList;
@@ -631,7 +666,7 @@ namespace TvpMain.Forms
         private System.Windows.Forms.Button runChecksButton;
         private System.Windows.Forms.Button cancelButton;
         private System.Windows.Forms.TextBox helpTextBox;
-        private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem exitMenuItem;
         private System.Windows.Forms.Label projectNameText;
         private System.Windows.Forms.Button refreshButton;
         private System.Windows.Forms.Label filterLabel;
@@ -647,5 +682,10 @@ namespace TvpMain.Forms
         private System.Windows.Forms.DataGridViewTextBoxColumn CFLanguages;
         private System.Windows.Forms.DataGridViewTextBoxColumn CFTags;
         private System.Windows.Forms.DataGridViewTextBoxColumn CFId;
+        private System.Windows.Forms.ToolStripMenuItem newMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem newCheckMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem editContextMenuItem;
     }
 }

@@ -118,6 +118,11 @@ namespace TvpMain.Util
         public const int HASH_PRIME = 397;
 
         /// <summary>
+        /// The name of the file where plugin options are stored.
+        /// </summary>
+        public const string OPTIONS_FILE_NAME = "Options.xml";
+
+        /// <summary>
         /// The name of the file used to keep track of the last synchronization run.
         /// </summary>
         public const string LAST_SYNC_FILE_NAME = "lastSync";

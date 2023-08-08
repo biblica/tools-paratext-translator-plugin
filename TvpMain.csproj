@@ -398,6 +398,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="CheckManagement\IRemoteService.cs" />
     <Compile Include="CheckManagement\IRepository.cs" />
     <Compile Include="CheckManagement\LocalRepository.cs" />
+    <Compile Include="CheckManagement\S3RepositoryOptions.cs" />
     <Compile Include="CheckManagement\S3Service.cs" />
     <Compile Include="CheckManagement\S3Repository.cs" />
     <Compile Include="CheckManagement\S3ServiceProvider.cs" />
@@ -442,6 +443,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Forms\LicenseForm.Designer.cs">
       <DependentUpon>LicenseForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\OptionsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\OptionsForm.Designer.cs">
+      <DependentUpon>OptionsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\RunChecks.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -453,6 +460,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Project\FileManager.cs" />
     <Compile Include="Project\ProjectCheckSettings.cs" />
     <Compile Include="Project\ProjectUserAccess.cs" />
+    <Compile Include="Project\TvpOptions.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -517,6 +525,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\LicenseForm.resx">
       <DependentUpon>LicenseForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\OptionsForm.resx">
+      <DependentUpon>OptionsForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\RunChecks.resx">
       <DependentUpon>RunChecks.cs</DependentUpon>

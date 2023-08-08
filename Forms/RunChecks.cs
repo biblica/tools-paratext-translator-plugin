@@ -25,6 +25,7 @@ using TvpMain.CheckManagement;
 using TvpMain.Project;
 using TvpMain.Text;
 using TvpMain.Util;
+using System.Xml.Serialization;
 
 namespace TvpMain.Forms
 {
@@ -35,6 +36,11 @@ namespace TvpMain.Forms
     /// </summary>
     public partial class RunChecks : Form
     {
+        /// <summary>
+        /// The full path to the file where TVP options are stored.
+        /// </summary>
+        private string _optionsFilePath;
+
         /// <summary>
         /// Whether the user is a TVP Admin
         /// </summary>
@@ -151,6 +157,8 @@ namespace TvpMain.Forms
             _progressForm = new GenericProgressForm("Synchronizing Check/Fixes");
             _connectForm = new GenericProgressForm("Checking Connection ...");
             _checkManager = new CheckManager();
+            _optionsFilePath = Path.Combine(Directory.GetCurrentDirectory(),
+                MainConsts.TVP_FOLDER_NAME, MainConsts.OPTIONS_FILE_NAME);
 
             // set up the needed service dependencies
             _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -326,6 +334,26 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
+        /// Checks to see if a display item is a built-in check.
+        /// </summary>
+        /// <param name="item">The item to check.</param>
+        /// <returns>true if the item is built-in. false otherwise.</returns>
+        private bool isBuiltIn(DisplayItem item)
+        {
+            return item.Location == BUILTIN_CHECKS_LOCATION;
+        }
+
+        /// <summary>
+        /// Checks to see if a display item is a local check.
+        /// </summary>
+        /// <param name="item">The item to check.</param>
+        /// <returns>true if the item is a local check. false otherwise.</returns>
+        private bool isLocal(DisplayItem item)
+        {
+            return item.Location == LOCAL_CHECKS_LOCATION;
+        }
+
+        /// <summary>
         /// Update what is shown on the form, in the list of checks, filtering for the search if applicable
         /// </summary>
         private void UpdateDisplayGrid()
@@ -352,16 +380,12 @@ namespace TvpMain.Forms
                 checksList.Rows[rowIndex].Selected = displayItem.Selected;
                 checksList.Rows[rowIndex].Tag = displayItem;
 
-                // Whether a check is local
-                var isLocal = displayItem.Location == LOCAL_CHECKS_LOCATION;
-                var isBuiltin = displayItem.Location == BUILTIN_CHECKS_LOCATION;
-
                 // loop through all the cells in the row since tool tips can only be placed on the cell
                 for (var i = 0; i < checksList.Columns.Count; i++)
                 {
                     var toolTipBuilder = new StringBuilder(displayItem.Tooltip);
 
-                    if (!isBuiltin && (isLocal || _isCurrentUserTvpAdmin))
+                    if (!isBuiltIn(displayItem) && (isLocal(displayItem) || _isCurrentUserTvpAdmin))
                     {
                         toolTipBuilder.Append(Environment.NewLine);
                         toolTipBuilder.Append(Environment.NewLine);
@@ -438,17 +462,6 @@ namespace TvpMain.Forms
         private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Close();
-        }
-
-        /// <summary>
-        /// Start the check/fix editor from the menu
-        /// </summary>
-        /// <param name="sender">The control that sent this event</param>
-        /// <param name="e">The event information that triggered this call</param>
-        private void EditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            new CheckEditor().ShowDialog(this);
-            UpdateDisplayItems();
         }
 
         /// <summary>
@@ -937,36 +950,34 @@ namespace TvpMain.Forms
         private void ChecksList_EditCheck(object sender, DataGridViewCellEventArgs e)
         {
             // Get the check that was clicked
-            var selectedCheck = _displayItems[e.RowIndex];
+            var displayItem = _displayItems[e.RowIndex];
 
             var isTvpAdmin = _isCurrentUserTvpAdmin;
-            var isLocal = selectedCheck.Location == LOCAL_CHECKS_LOCATION;
-            var isBuiltIn = selectedCheck.Location == BUILTIN_CHECKS_LOCATION;
 
             // Non-admins can only edit local checks
-            if (isBuiltIn)
+            if (isBuiltIn(displayItem))
             {
                 // Dialog box that shows if attempts to edit a built-in check
                 MessageBox.Show("Built-in checks are not able to be edited.", "Warning");
                 return;
             }
-            else if (!isLocal && !isTvpAdmin)
+            else if (!isLocal(displayItem) && !isTvpAdmin)
             {
                 // Dialog box that shows if a user attempts to edit a check as a non-admin
                 MessageBox.Show("Only administrators can edit non-local checks.", "Warning");
                 return;
             }
 
-            var checkDir = isLocal
+            var checkDir = isLocal(displayItem)
                 ? _checkManager.GetLocalRepoDirectory()
                 : _checkManager.GetInstalledChecksDirectory();
 
             // Get the file location for the selected check
-            var fileName = _checkManager.GetCheckAndFixItemFilename(selectedCheck.Item);
+            var fileName = _checkManager.GetCheckAndFixItemFilename(displayItem.Item);
             var fullPath = Path.Combine(checkDir, fileName);
 
             // Open the CheckEditor with the selected check
-            new CheckEditor(new FileInfo(fullPath), !isLocal).ShowDialog(this);
+            new CheckEditor(new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
 
             UpdateDisplayItems();
         }
@@ -1133,7 +1144,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
+        private void deleteContextMenuItem_Click(object sender, EventArgs e)
         {
             deleteSelectedRows();
         }
@@ -1268,7 +1279,8 @@ namespace TvpMain.Forms
         /// Handles right mouse button clicks.
         /// - When an unselected row is right clicked, select it and unselect all other rows.
         /// - If an item row is right-clicked enable the context menu.
-        /// - Disable the delete option if none of the selected rows are deleteable
+        /// - Disable the edit option if the selected row is not editable.
+        /// - Disable the delete option if any of the selected rows are not deleteable
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
@@ -1289,6 +1301,11 @@ namespace TvpMain.Forms
                 // If a data row is right clicked enable the context menu.
                 checksList.ContextMenuStrip = checksListContextMenu;
 
+                if (checksList.SelectedRows.Count != 1 ||
+                    !RowIsEditable(checksList.SelectedRows[0]))
+                {
+                    editContextMenuItem.Enabled = false;
+                }
                 // Disable the delete option on the context menu if any selected rows are not deleteable
                 if (!AllSelectedRowsAreDeletable())
                 {
@@ -1308,6 +1325,29 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
+        /// Checks whether this row is editable. 
+        /// </summary>
+        /// <param name="row">The row to check.</param>
+        /// <returns>true if the row is editable. false otherwise.</returns>
+        private bool RowIsEditable(DataGridViewRow row)
+        {
+            var item = (DisplayItem)row.Tag;
+            // Built-in checks cannot be edited.
+            if (isBuiltIn(item))
+            {
+                return false;
+            }
+
+            // Non-admins can only edit local checks.
+            if (!isLocal(item) && !_isCurrentUserTvpAdmin)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Checks whether a row in the checks list is deletable.
         /// </summary>
         /// <param name="row">The row to check</param>
@@ -1315,7 +1355,7 @@ namespace TvpMain.Forms
         private bool RowIsDeletable(DataGridViewRow row)
         {
             var item = row.Tag as DisplayItem;
-            if (item == null || item.Location == BUILTIN_CHECKS_LOCATION)
+            if (item == null || isBuiltIn(item))
             {
                 return false;
             }
@@ -1347,7 +1387,75 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void checksListContextMenu_Closed(object sender, ToolStripDropDownClosedEventArgs e)
         {
+            editContextMenuItem.Enabled = true;
             deleteContextMenuItem.Enabled = true;
+        }
+
+        /// <summary>
+        /// Start the check/fix editor from the menu
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void newCheckMenuItem_Click(object sender, EventArgs e)
+        {
+            new CheckEditor().ShowDialog(this);
+            UpdateDisplayItems();
+        }
+
+        /// <summary>
+        /// Saves TVP options to an xml file.
+        /// </summary>
+        /// <param name="options">The options to save</param>
+        private void saveOptions(TvpOptions options)
+        {
+            var serializer = new XmlSerializer(options.GetType());
+            using var file = File.Create(_optionsFilePath);
+            serializer.Serialize(file, options);
+        }
+
+        /// <summary>
+        /// Handles the Options menu item. Opens the Options form to modify TVP settings.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void optionsMenuItem_Click(object sender, EventArgs e)
+        {
+            var form = new OptionsForm();
+            form.StartPosition = FormStartPosition.CenterParent;
+            var result = form.ShowDialog(this);
+            if (result == DialogResult.OK)
+            {
+                var options = form.getOptions();
+                saveOptions(options);
+            }
+        }
+
+        /// <summary>
+        /// Handles the Edit context menu item. Opens a check in the check editor form.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void editContextMenuItem_Click(object sender, EventArgs e)
+        {
+            if (checksList.SelectedRows.Count != 1 || !RowIsEditable(checksList.SelectedRows[0]))
+            {
+                return;
+            }
+
+            var displayItem = (DisplayItem)checksList.SelectedRows[0].Tag;
+
+            var checkDir = isLocal(displayItem)
+                ? _checkManager.GetLocalRepoDirectory()
+                : _checkManager.GetInstalledChecksDirectory();
+
+            // Get the file location for the selected check
+            var fileName = _checkManager.GetCheckAndFixItemFilename(displayItem.Item);
+            var fullPath = Path.Combine(checkDir, fileName);
+
+            // Open the CheckEditor with the selected check
+            new CheckEditor(new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
+
+            UpdateDisplayItems();
         }
     }
 }
