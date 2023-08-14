@@ -11,19 +11,18 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using TvpMain.Check;
 using TvpMain.CheckManagement;
+using TVPTest;
 
 namespace TvpTest
 {
-    public class TestS3Repository : S3Repository
-    {
-        protected override IRemoteService Service { get; } = new TestS3Service();
-    }
-
     [TestCategory("IgnoreOnBuild")]
     [TestClass()]
     public class S3RepositoryTests
     {
-        readonly TestS3Repository s3Repository = new TestS3Repository();
+        readonly S3Repository s3Repository = new S3Repository(TestAWSCredentials.AWS_TVP_TEST_ACCESS_KEY_ID,
+                  TestAWSCredentials.AWS_TVP_TEST_ACCESS_KEY_SECRET,
+                  TestAWSCredentials.AWS_TVP_TEST_REGION,
+                  TestAWSCredentials.AWS_TVP_TEST_BUCKET_NAME);
         const string filename1 = "samplecheck-1.0.0.xml";
         const string filename2 = "sampleasynccheck-1.0.0.xml";
 

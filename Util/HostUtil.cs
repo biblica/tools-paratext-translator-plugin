@@ -331,7 +331,7 @@ namespace TvpMain.Util
         /// </summary>
         /// <param name="projectName"></param>
         /// <returns>True, if the current user is an Admin for the given project</returns>
-        public bool isCurrentUserAdmin(string projectName)
+        public bool isCurrentUserProjectAdmin(string projectName)
         {
             if (projectName == null || projectName.Length < 1)
             {
@@ -356,7 +356,7 @@ namespace TvpMain.Util
                     }
                 }
             }
-            catch (FileNotFoundException ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message + "\n\nContinuing as non-admin.", "Notice...", MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -395,29 +395,9 @@ namespace TvpMain.Util
         public bool IsOnline;
 
         /// <summary>
-        /// Method to determine if the user is a TVP administrator. Relies on a list of admins hosted on the TVP repo.
+        /// The name of the current Paratext user.
         /// </summary>
-        /// <returns>True, if the current user is a TVP admin</returns>
-        public bool IsCurrentUserTvpAdmin()
-        {
-            var isAdmin = false;
-
-            // Fetch a CSV list of administrators and parse it into a simple array, omitting the header and common special characters
-            try
-            {
-                var stream = S3ServiceProvider.Instance.GetFileStream(MainConsts.PERMISSIONS_FILE_NAME);
-                using var reader = new StreamReader(stream);
-                var lines = CSVFile.Read(reader);
-                var admin = lines.ToList().SelectMany(item => item).ToArray(); // Flatten the CSV lines
-                isAdmin = admin.Contains(_host.UserName);
-            }
-            catch (Exception exception)
-            {
-                Instance.LogLine($"Failed to fetch {MainConsts.PERMISSIONS_FILE_NAME} from S3: " + exception, false);
-            }
-
-            return isAdmin;
-        }
+        public string CurrentUser { get { return _host.UserName; } }
 
         /// <summary>
         /// This function navigates to a specific project's BCV in the Paratext GUI.

@@ -16,11 +16,11 @@ namespace TvpMain.Project
         /// <summary>
         /// Settings for the remote repository used for sharing checks among TVP users.
         /// </summary>
-        public S3RepositoryOptions SharedRepo { get; set; }
+        public List<S3RepositoryOptions> SharedRepositories { get; set; }
 
         public TvpOptions()
         {
-            SharedRepo = new S3RepositoryOptions();
+            SharedRepositories = new List<S3RepositoryOptions>();
         }
     }
 }

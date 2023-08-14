@@ -26,5 +26,10 @@ namespace TvpMain.Forms
             InitializeComponent();
             this.Text = title;
         }
+
+        private void GenericProgressForm_Load(object sender, System.EventArgs e)
+        {
+            CenterToParent();
+        }
     }
 }

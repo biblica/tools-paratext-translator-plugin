@@ -122,20 +122,20 @@ namespace TvpMain.Forms
             this.newMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.newCheckMenuItem});
             this.newMenuItem.Name = "newMenuItem";
-            this.newMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.newMenuItem.Size = new System.Drawing.Size(122, 26);
             this.newMenuItem.Text = "New";
             // 
             // newCheckMenuItem
             // 
             this.newCheckMenuItem.Name = "newCheckMenuItem";
-            this.newCheckMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.newCheckMenuItem.Size = new System.Drawing.Size(140, 26);
             this.newCheckMenuItem.Text = "Check...";
             this.newCheckMenuItem.Click += new System.EventHandler(this.newCheckMenuItem_Click);
             // 
             // exitMenuItem
             // 
             this.exitMenuItem.Name = "exitMenuItem";
-            this.exitMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.exitMenuItem.Size = new System.Drawing.Size(122, 26);
             this.exitMenuItem.Text = "E&xit";
             this.exitMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItem_Click);
             // 
@@ -250,6 +250,7 @@ namespace TvpMain.Forms
             this.refreshButton.TabIndex = 3;
             this.refreshButton.Text = "Fetch Updates";
             this.refreshButton.UseVisualStyleBackColor = true;
+            this.refreshButton.Visible = false;
             this.refreshButton.Click += new System.EventHandler(this.RefreshButton_Click);
             // 
             // setDefaultsToSelected
@@ -383,20 +384,20 @@ namespace TvpMain.Forms
             this.editContextMenuItem,
             this.deleteContextMenuItem});
             this.checksListContextMenu.Name = "checksListContextMenuStrip";
-            this.checksListContextMenu.Size = new System.Drawing.Size(211, 80);
+            this.checksListContextMenu.Size = new System.Drawing.Size(123, 52);
             this.checksListContextMenu.Closed += new System.Windows.Forms.ToolStripDropDownClosedEventHandler(this.checksListContextMenu_Closed);
             // 
             // editContextMenuItem
             // 
             this.editContextMenuItem.Name = "editContextMenuItem";
-            this.editContextMenuItem.Size = new System.Drawing.Size(210, 24);
+            this.editContextMenuItem.Size = new System.Drawing.Size(122, 24);
             this.editContextMenuItem.Text = "Edit...";
             this.editContextMenuItem.Click += new System.EventHandler(this.editContextMenuItem_Click);
             // 
             // deleteContextMenuItem
             // 
             this.deleteContextMenuItem.Name = "deleteContextMenuItem";
-            this.deleteContextMenuItem.Size = new System.Drawing.Size(210, 24);
+            this.deleteContextMenuItem.Size = new System.Drawing.Size(122, 24);
             this.deleteContextMenuItem.Text = "Delete";
             this.deleteContextMenuItem.Click += new System.EventHandler(this.deleteContextMenuItem_Click);
             // 

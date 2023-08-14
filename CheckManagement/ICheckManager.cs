@@ -9,6 +9,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 using System.Collections.Generic;
 using TvpMain.Check;
+using TvpMain.Util;
 
 namespace TvpMain.CheckManagement
 {
@@ -30,6 +31,30 @@ namespace TvpMain.CheckManagement
     /// </summary>
     interface ICheckManager
     {
+        /// <summary>
+        /// Sets up the remote S3 repository based on settings in the TVP options file.
+        /// </summary>
+        public void SetupRemoteRepository();
+
+        /// <summary>
+        /// Indicates if a remote repository exists and is enabled.
+        /// </summary>
+        /// <returns>true if a remote repo is enabled.</returns>
+        public bool RemoteRepositoryIsEnabled();
+
+        /// <summary>
+        /// Method to determine if the user is an administrator of the remote repository. 
+        /// Relies on a list of admins hosted on the remote repository.
+        /// </summary>
+        /// <returns>True, if the current user is an admin.</returns>
+        public bool IsCurrentUserRemoteAdmin();
+
+        /// <summary>
+        /// Checks to see if the remote repository should be synchronized on startup.
+        /// </summary>
+        /// <returns>true if sync on startup is enabled.</returns>
+        public bool SyncOnStartup();
+
         /// <summary>
         /// This method returns a list of <c>CheckAndFixItem</c>s that have been installed from a remote repository.
         /// </summary>
@@ -91,5 +116,13 @@ namespace TvpMain.CheckManagement
         /// <param name="item">The <c>CheckAndFixItem</c></param>
         /// <returns>The filename produced for the provided <c>CheckAndFixItem</c>.</returns>
         public string GetCheckAndFixItemFilename(CheckAndFixItem item);
+
+        /// <summary>
+        /// Indicates if the remote repository settings have been verified.
+        /// </summary>
+        /// <param name="error">If not verified, a message explaining why the verification failed.</param>
+        /// <returns>true if the remote repository is verified.</returns>
+
+        public bool RemoteRepositoryIsVerified(out string error);
     }
 }

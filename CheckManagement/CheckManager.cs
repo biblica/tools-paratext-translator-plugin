@@ -14,8 +14,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Management.Instrumentation;
+using System.ServiceModel.Channels;
 using System.Web.UI;
 using TvpMain.Check;
+using TvpMain.Project;
 using TvpMain.Util;
 
 namespace TvpMain.CheckManagement
@@ -26,9 +29,8 @@ namespace TvpMain.CheckManagement
     public class CheckManager : ICheckManager
     {
         private readonly IRepository _installedChecksRepository;
-        private readonly IRepository _locallyDevelopedChecksRepository;
-        private readonly IRepository _s3Repository;
-
+        private readonly IRepository _localRepository;
+        private IRepository _remoteRepository = null;
         private static readonly string SyncStatusFileName =
             $"{Directory.GetCurrentDirectory()}\\{MainConsts.TVP_FOLDER_NAME}\\{MainConsts.LAST_SYNC_FILE_NAME}";
 
@@ -83,9 +85,77 @@ namespace TvpMain.CheckManagement
         {
             _installedChecksRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
                 MainConsts.INSTALLED_CHECK_FOLDER_NAME));
-            _locallyDevelopedChecksRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
+            _localRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
                 MainConsts.LOCAL_CHECK_FOLDER_NAME));
-            _s3Repository = new S3Repository();
+           SetupRemoteRepository();
+        }
+
+        /// <summary>
+        /// Sets up the remote S3 repository based on settings in the TVP options file.  
+        /// </summary>
+        public void SetupRemoteRepository()
+        {
+            var options = OptionsManager.LoadOptions();
+            if (options.SharedRepositories.Count > 0)
+            {
+                _remoteRepository = new S3Repository(options.SharedRepositories[0]);
+                if (!_remoteRepository.Verified && _remoteRepository.Enabled) 
+                {
+                    _remoteRepository.Verify();
+                    options.SharedRepositories[0].Verified = _remoteRepository.Verified;
+                    if (!_remoteRepository.Verified && _remoteRepository.Enabled)
+                    {
+                        _remoteRepository.Enabled = false;
+                        options.SharedRepositories[0].Enabled = false;
+                        _installedChecksRepository.Clear();
+                    }
+                    OptionsManager.SaveOptions(options);
+                }
+                // If no permissions file exists for this repository, make the current user the admin. 
+                if (_remoteRepository.Enabled && _remoteRepository.Admins.Count < 1)
+                {
+                    _remoteRepository.SetAdmin(HostUtil.Instance.CurrentUser);
+                }
+            }
+            else
+            {
+                _remoteRepository = null;
+            }
+        }
+
+        /// <summary>
+        /// Indicates if the remote repository settings have been verified.
+        /// </summary>
+        /// <param name="error">If not verified, a message explaining why the verification failed.</param>
+        /// <returns>true if the remote repository is verified.</returns>
+        public bool RemoteRepositoryIsVerified(out string error)
+        {
+            error = _remoteRepository.VerificationError;
+            return _remoteRepository.Verified;
+        }
+
+        /// <summary>
+        /// Method to determine if the user is an administrator of the remote repository. 
+        /// Relies on a list of admins hosted on the remote repository.
+        /// </summary>
+        /// <returns>True, if the current user is an admin.</returns>
+        public bool IsCurrentUserRemoteAdmin()
+        {
+            return _remoteRepository.IsAdmin(HostUtil.Instance.CurrentUser);
+        }
+
+        /// <summary>
+        /// Indicates if the remote repository should be synchronized on startup.
+        /// </summary>
+        /// <returns>true if sync on startup is enabled.</returns>
+        public bool SyncOnStartup()
+        {
+            if (RemoteRepositoryIsEnabled() && _remoteRepository.SyncOnStartup)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -144,6 +214,15 @@ namespace TvpMain.CheckManagement
                 [SynchronizationResultType.Updated] = outdatedCheckAndFixItems.Values.ToList(),
                 [SynchronizationResultType.Deprecated] = deprecatedCheckAndFixItems
             };
+        }
+
+        /// <summary>
+        /// Indicates if a remote repository exists and is enabled.
+        /// </summary>
+        /// <returns>true if a remote repo is enabled.</returns>
+        public bool RemoteRepositoryIsEnabled()
+        {
+            return !(_remoteRepository is null) && _remoteRepository.Enabled;
         }
 
         /// <summary>
@@ -244,7 +323,7 @@ namespace TvpMain.CheckManagement
             foreach (var check in GetSavedCheckAndFixItems()
                 .Where(check => check.Id == item.Id).ToList())
                 DeleteCheckAndFixItem(check);
-            _locallyDevelopedChecksRepository.AddCheckAndFixItem(filename, item);
+            _localRepository.AddCheckAndFixItem(filename, item);
         }
 
         /// <summary>
@@ -264,7 +343,7 @@ namespace TvpMain.CheckManagement
         public virtual void DeleteCheckAndFixItem(CheckAndFixItem item)
         {
             var filename = GetCheckAndFixItemFilename(item);
-            _locallyDevelopedChecksRepository.RemoveCheckAndFixItem(filename);
+            _localRepository.RemoveCheckAndFixItem(filename);
         }
 
         /// <summary>
@@ -274,7 +353,7 @@ namespace TvpMain.CheckManagement
         public void PublishCheckAndFixItem(CheckAndFixItem item)
         {
             var filename = GetCheckAndFixItemFilename(item);
-            _s3Repository.AddCheckAndFixItem(filename, item);
+            _remoteRepository.AddCheckAndFixItem(filename, item);
         }
 
         /// <summary>
@@ -285,7 +364,7 @@ namespace TvpMain.CheckManagement
         {
             // TODO: Add check for failed S3 removal
             string fileName = GetCheckAndFixItemFilename(item);
-            _s3Repository.RemoveCheckAndFixItem(fileName);
+            _remoteRepository.RemoveCheckAndFixItem(fileName);
             _installedChecksRepository.RemoveCheckAndFixItem(fileName);
         }
 
@@ -295,7 +374,7 @@ namespace TvpMain.CheckManagement
         /// <returns>The <c>CheckAndFixItem</c>s which are available in the remote repository.</returns>
         public virtual List<CheckAndFixItem> GetAvailableCheckAndFixItems()
         {
-            return _s3Repository.GetCheckAndFixItems();
+            return _remoteRepository.GetCheckAndFixItems();
         }
 
         /// <summary>
@@ -313,7 +392,7 @@ namespace TvpMain.CheckManagement
         /// <returns>A list of saved <c>CheckAndFixItem</c>s.</returns>
         public virtual List<CheckAndFixItem> GetSavedCheckAndFixItems()
         {
-            return _locallyDevelopedChecksRepository.GetCheckAndFixItems();
+            return _localRepository.GetCheckAndFixItems();
         }
 
         /// <summary>
