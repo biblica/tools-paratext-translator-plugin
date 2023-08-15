@@ -19,8 +19,6 @@ namespace TvpMain.Project
         /// </summary>
         public const string OPTIONS_FILE_NAME = "Options.xml";
 
-        private static TvpOptions _options = null;
-
         /// <summary>
         /// The full path to the file where TVP options are stored.
         /// </summary>

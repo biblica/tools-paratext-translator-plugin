@@ -20,6 +20,8 @@ namespace TvpMain.Project
 
         public TvpOptions()
         {
+            // This is a list to support the ability to create configure
+            // multiple remote repositories in the future. 
             SharedRepositories = new List<S3RepositoryOptions>();
         }
     }

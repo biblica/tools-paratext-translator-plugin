@@ -42,7 +42,7 @@ namespace TvpMain.CheckManagement
         /// <summary>
         /// A unique identifier for the repository.
         /// </summary>
-        public Guid Id { get { return new Guid(); } }
+        public Guid Id { get { return default(Guid); } }
 
         /// <summary>
         /// The display name for the repository.
@@ -55,7 +55,10 @@ namespace TvpMain.CheckManagement
                 return _defaultName;
             }
 
-            set { }
+            set
+            {
+                throw new Exception("The Name property cannot be set on a local repository.");
+            }
         }
 
         /// <summary>
@@ -69,7 +72,10 @@ namespace TvpMain.CheckManagement
                 return true; 
             }
 
-            set { }
+            set 
+            {
+                throw new Exception("The Enabled property cannot be set on a local repository.");
+            }
         }
 
         /// <summary>
@@ -83,13 +89,16 @@ namespace TvpMain.CheckManagement
                 return false; 
             }
 
-            set { }
+            set
+            {
+                throw new Exception("The SyncOnStartup property cannot be set on a local repository.");
+            }
         }
 
         /// <summary>
         /// A list of admin user names for this repository.
         /// </summary>
-        public List<string> Admins { get { return new List<string>(); } }
+        public List<string> Admins { get; } = new List<string>();
 
         /// <summary>
         /// Uploads a new admin list consisting of a single user.
@@ -168,10 +177,6 @@ namespace TvpMain.CheckManagement
         {
             Directory.CreateDirectory(FolderPath);
         }
-
-        // <summary>
-        // Deletes all checks from this repository.
-        // </summary>
 
         /// <summary>
         /// Deletes all checks from this repository.
