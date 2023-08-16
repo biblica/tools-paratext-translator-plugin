@@ -25,6 +25,7 @@ using TvpMain.CheckManagement;
 using TvpMain.Project;
 using TvpMain.Text;
 using TvpMain.Util;
+using System.Xml.Serialization;
 
 namespace TvpMain.Forms
 {
@@ -36,24 +37,9 @@ namespace TvpMain.Forms
     public partial class RunChecks : Form
     {
         /// <summary>
-        /// Whether the user is a TVP Admin
-        /// </summary>
-        private bool _isCurrentUserTvpAdmin;
-
-        /// <summary>
         /// The minimum number of characters required to perform a search.
         /// </summary>
         private const int MIN_SEARCH_CHARACTERS = 3;
-
-        /// <summary>
-        /// Prefix for local checks constant.
-        /// </summary>
-        private const string LOCAL_CHECKS_PREFIX = "(Local)";
-
-        /// <summary>
-        /// Prefix for local checks constant.
-        /// </summary>
-        private const string BUILTIN_CHECKS_PREFIX = "(Built-in)";
 
         /// <summary>
         /// Paratext host interface.
@@ -86,14 +72,19 @@ namespace TvpMain.Forms
         private BookNameItem[] _selectedBooks;
 
         /// <summary>
+        /// Access to checks repository options
+        /// </summary>
+        readonly OptionsManager _optionsManager;
+
+        /// <summary>
         /// Access to the checks themselves
         /// </summary>
         readonly ICheckManager _checkManager;
 
         /// <summary>
-        /// The list of remote checks
+        /// The list of installed checks
         /// </summary>
-        List<CheckAndFixItem> _remoteChecks;
+        List<CheckAndFixItem> _installedChecks;
 
         /// <summary>
         /// The list of local checks, can't be set as defaults
@@ -103,12 +94,12 @@ namespace TvpMain.Forms
         /// <summary>
         /// Simple progress bar form for when the checks are being synchronized
         /// </summary>
-        GenericProgressForm _progressForm;
+        GenericProgressForm _syncProgressForm;
 
         /// <summary>
         /// Simple progress bar form for when the plugin is attempting to connect to the internet
         /// </summary>
-        GenericProgressForm _connectForm;
+        GenericProgressForm _connectProgressForm;
 
         /// <summary>
         /// This is a separate list of items to display within the grid. This allows
@@ -121,7 +112,7 @@ namespace TvpMain.Forms
         /// </summary>
         readonly CheckAndFixItem _scriptureReferenceCf = new CheckAndFixItem(
             MainConsts.V1_SCRIPTURE_REFERENCE_CHECK_GUID,
-            "(Built-in) Scripture Reference Verifications",
+            "Scripture Reference Verifications",
             "Scripture reference tag and formatting checks.",
             "2.0.0.0",
             CheckAndFixItem.CheckScope.VERSE);
@@ -130,7 +121,7 @@ namespace TvpMain.Forms
         /// This is a fixed CF for V1 TVP missing punctuation checking
         /// </summary>
         readonly CheckAndFixItem _missingPunctuationCf = new CheckAndFixItem(MainConsts.V1_PUNCTUATION_CHECK_GUID,
-            "(Built-in) Missing Punctuation Verifications",
+            "Missing Punctuation Verifications",
             "Searches for missing punctuation.",
             "2.0.0.0",
             CheckAndFixItem.CheckScope.VERSE);
@@ -143,9 +134,10 @@ namespace TvpMain.Forms
         public RunChecks(IHost host, string activeProjectName)
         {
             InitializeComponent();
-            _progressForm = new GenericProgressForm("Synchronizing Check/Fixes");
-            _connectForm = new GenericProgressForm("Checking Connection ...");
-            _checkManager = new CheckManager();
+            _syncProgressForm = new GenericProgressForm("Synchronizing Check/Fixes");
+            _connectProgressForm = new GenericProgressForm("Checking Connection ...");
+            _optionsManager = new OptionsManager();
+            _checkManager = new CheckManager(_optionsManager);
 
             // set up the needed service dependencies
             _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -182,7 +174,7 @@ namespace TvpMain.Forms
             SetCurrentBook();
 
             // disable the ability to save the project check defaults if not an admin
-            if (!HostUtil.Instance.isCurrentUserAdmin(_activeProjectName))
+            if (!HostUtil.Instance.isCurrentUserProjectAdmin(_activeProjectName))
             {
                 setDefaultsToSelected.Hide();
             }
@@ -195,9 +187,16 @@ namespace TvpMain.Forms
             
             UpdateDisplayItems();
 
-            // Ensure that the user is online so that permissions and synchronization work as expected.
-            ConnectAndSync();
-            
+            if (_checkManager.RemoteRepositoryIsEnabled())
+            {
+                refreshButton.Visible = true;
+                if (_checkManager.SyncOnStartup())
+                {
+                    // Ensure that the user is online so that permissions and synchronization work as expected.
+                    ConnectAndSync();
+                }
+            }
+
             // Update with the last-known refresh time.
             UpdateRefreshTooltip(null); 
         }
@@ -225,20 +224,19 @@ namespace TvpMain.Forms
                         ? Enumerable.Empty<string>()
                         : _displayItems
                             .Where(foundItem => foundItem.Selected)
-                            .Select(foundItem => foundItem.Name))
+                            .Select(foundItem => foundItem.Id))
                     .ToImmutableHashSet();
 
                 // load all the checks into the list
-                _remoteChecks = _checkManager.GetInstalledCheckAndFixItems();
-                _localChecks = _checkManager.GetSavedCheckAndFixItems();
                 _displayItems = new List<DisplayItem>();
 
                 // add the V1 defaults
                 // get if the check is available (item1), and if not, the text for the tooltip (item2)
                 var isCheckAvailableTupleRef = IsCheckAvailableForProject(_scriptureReferenceCf);
                 _displayItems.Add(new DisplayItem(
-                    prevCheckedItems.Contains(_scriptureReferenceCf.Name) ||
+                    prevCheckedItems.Contains(_scriptureReferenceCf.Id) ||
                     IsCheckDefaultForProject(_scriptureReferenceCf),
+                    MainConsts.BUILTIN_REPO_NAME,
                     _scriptureReferenceCf.Name,
                     _scriptureReferenceCf.Description,
                     _scriptureReferenceCf.Version,
@@ -254,8 +252,9 @@ namespace TvpMain.Forms
 
                 var isCheckAvailableTuplePunc = IsCheckAvailableForProject(_missingPunctuationCf);
                 _displayItems.Add(new DisplayItem(
-                    prevCheckedItems.Contains(_missingPunctuationCf.Name) ||
+                    prevCheckedItems.Contains(_missingPunctuationCf.Id) ||
                     IsCheckDefaultForProject(_missingPunctuationCf),
+                    MainConsts.BUILTIN_REPO_NAME,
                     _missingPunctuationCf.Name,
                     _missingPunctuationCf.Description,
                     _missingPunctuationCf.Version,
@@ -270,13 +269,22 @@ namespace TvpMain.Forms
                 ));
 
                 // add all the known remote checks
-                _remoteChecks.Sort((x, y) => x.Name.CompareTo(y.Name));
-                foreach (var item in _remoteChecks)
+                if (_checkManager.RemoteRepositoryIsEnabled())
+                {
+                    _installedChecks = _checkManager.GetInstalledCheckAndFixItems();
+                }
+                else
+                {
+                    _installedChecks = new List<CheckAndFixItem>();
+                }
+                _installedChecks.Sort((x, y) => x.Name.CompareTo(y.Name));
+                foreach (var item in _installedChecks)
                 {
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
                     var isCheckAvailableTuple = IsCheckAvailableForProject(item);
                     _displayItems.Add(new DisplayItem(
-                        prevCheckedItems.Contains(item.Name) || IsCheckDefaultForProject(item),
+                        prevCheckedItems.Contains(item.Id) || IsCheckDefaultForProject(item),
+                        MainConsts.REMOTE_REPO_NAME,
                         item.Name,
                         item.Description,
                         item.Version,
@@ -290,14 +298,15 @@ namespace TvpMain.Forms
                 }
 
                 // add all the local checks
+                _localChecks = _checkManager.GetSavedCheckAndFixItems();
                 foreach (var item in _localChecks)
                 {
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
                     var isCheckAvailableTuple = IsCheckAvailableForProject(item);
-                    var localName = "(Local) " + item.Name;
                     _displayItems.Add(new DisplayItem(
-                        prevCheckedItems.Contains(localName) || false,
-                        localName,
+                        prevCheckedItems.Contains(item.Id) || false,
+                        MainConsts.LOCAL_REPO_NAME,
+                        item.Name,
                         item.Description,
                         item.Version,
                         item.Languages != null && item.Languages.Length > 0 ? string.Join(", ", item.Languages) : "All",
@@ -318,6 +327,26 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
+        /// Checks to see if a display item is a built-in check.
+        /// </summary>
+        /// <param name="item">The item to check.</param>
+        /// <returns>true if the item is built-in. false otherwise.</returns>
+        private bool isBuiltIn(DisplayItem item)
+        {
+            return item.Location == MainConsts.BUILTIN_REPO_NAME;
+        }
+
+        /// <summary>
+        /// Checks to see if a display item is a local check.
+        /// </summary>
+        /// <param name="item">The item to check.</param>
+        /// <returns>true if the item is a local check. false otherwise.</returns>
+        private bool isLocal(DisplayItem item)
+        {
+            return item.Location == MainConsts.LOCAL_REPO_NAME;
+        }
+
+        /// <summary>
         /// Update what is shown on the form, in the list of checks, filtering for the search if applicable
         /// </summary>
         private void UpdateDisplayGrid()
@@ -334,7 +363,7 @@ namespace TvpMain.Forms
                 }
 
                 var rowIndex = checksList.Rows.Add(
-                    displayItem.Selected,
+                    displayItem.Location,
                     displayItem.Name,
                     displayItem.Version,
                     displayItem.Languages,
@@ -343,26 +372,6 @@ namespace TvpMain.Forms
                 );
                 checksList.Rows[rowIndex].Selected = displayItem.Selected;
                 checksList.Rows[rowIndex].Tag = displayItem;
-
-                // Whether a check is local
-                var isLocal = displayItem.Name.StartsWith(LOCAL_CHECKS_PREFIX);
-                var isBuiltin = displayItem.Name.StartsWith(BUILTIN_CHECKS_PREFIX);
-
-                // loop through all the cells in the row since tool tips can only be placed on the cell
-                for (var i = 0; i < checksList.Columns.Count; i++)
-                {
-                    var toolTipBuilder = new StringBuilder(displayItem.Tooltip);
-
-                    if (!isBuiltin && (isLocal || _isCurrentUserTvpAdmin))
-                    {
-                        toolTipBuilder.Append(Environment.NewLine);
-                        toolTipBuilder.Append(Environment.NewLine);
-                        toolTipBuilder.Append(_isCurrentUserTvpAdmin ? "C" : "Local c");
-                        toolTipBuilder.Append("hecks can be edited by double-clicking on the name of the check.");
-                    }
-
-                    checksList.Rows[rowIndex].Cells[i].ToolTipText = toolTipBuilder.ToString().Trim();
-                }
 
                 // disable row if it can't be used on this project
                 if (displayItem.Active)
@@ -430,17 +439,6 @@ namespace TvpMain.Forms
         private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Close();
-        }
-
-        /// <summary>
-        /// Start the check/fix editor from the menu
-        /// </summary>
-        /// <param name="sender">The control that sent this event</param>
-        /// <param name="e">The event information that triggered this call</param>
-        private void EditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            new CheckEditor().ShowDialog(this);
-            UpdateDisplayItems();
         }
 
         /// <summary>
@@ -530,10 +528,9 @@ namespace TvpMain.Forms
             // grab the selected checks
             foreach (DataGridViewRow row in checksList.Rows)
             {
-                var item = ((DisplayItem) row.Tag).Item;
-                if ((bool) row.Cells[0].Value)
+                if (row.Selected)
                 {
-                    selectedChecks.Add(item);
+                    selectedChecks.Add(((DisplayItem)row.Tag).Item);
                 }
             }
 
@@ -596,8 +593,6 @@ namespace TvpMain.Forms
             // bring up book selection dialog, use current selection to initialize
             using (var form = new BookSelection(_projectManager, _selectedBooks))
             {
-                form.StartPosition = FormStartPosition.CenterParent;
-
                 var result = form.ShowDialog(this);
                 if (result == DialogResult.OK)
                 {
@@ -689,7 +684,7 @@ namespace TvpMain.Forms
                 {
                     var item = (DisplayItem) checksList.Rows[row.Index].Tag;
 
-                    if ((bool) row.Cells[0].Value)
+                    if (row.Selected)
                     {
                         if (!_projectCheckSettings.DefaultCheckIds.Contains(item.Id))
                         {
@@ -745,7 +740,6 @@ namespace TvpMain.Forms
         {
             var languageId = _host.GetProjectLanguageId(_activeProjectName, "translation validation").ToUpper();
             var projectRtl = _host.GetProjectRtoL(_activeProjectName);
-            var builtInCheck = item.Name.StartsWith(BUILTIN_CHECKS_PREFIX);
 
             // filter based on language
             var languageEnabled = item.Languages == null
@@ -768,11 +762,6 @@ namespace TvpMain.Forms
 
 
             // set the response strings for the appropriate filter reason
-            if (builtInCheck)
-            {
-                filterReasons.Add("This check is built-in and cannot be edited.");
-            }
-
             if (!languageEnabled)
             {
                 filterReasons.Add("This check doesn't support this project's language.");
@@ -904,7 +893,6 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void RefreshButton_Click(object sender, EventArgs e)
         {
-            PrepForSync(); // Update the UI immediately so that it doesn't appear to hang during connection check.
             ConnectAndSync(true);
         }
         
@@ -913,7 +901,7 @@ namespace TvpMain.Forms
         /// </summary>
         private void PrepForSync()
         {
-            _progressForm.Show();
+            _syncProgressForm.Show(this);
             refreshButton.Enabled = false;
             Enabled = false;
         }
@@ -935,41 +923,33 @@ namespace TvpMain.Forms
         /// <param name="e"></param>
         private void ChecksList_EditCheck(object sender, DataGridViewCellEventArgs e)
         {
-            const string localCheckPrefix = "(Local)";
-            const string builtInCheckPrefix = "(Built-in)";
-
             // Get the check that was clicked
-            var selectedCheck = _displayItems[e.RowIndex];
-
-            var isTvpAdmin = _isCurrentUserTvpAdmin;
-            var isLocalCheck = selectedCheck.Name.StartsWith(localCheckPrefix);
-            var builtInCheck = selectedCheck.Name.StartsWith(builtInCheckPrefix);
+            var displayItem = _displayItems[e.RowIndex];
 
             // Non-admins can only edit local checks
-            if (builtInCheck)
+            if (isBuiltIn(displayItem))
             {
                 // Dialog box that shows if attempts to edit a built-in check
                 MessageBox.Show("Built-in checks are not able to be edited.", "Warning");
                 return;
             }
-            else if (!isLocalCheck && !isTvpAdmin)
+            else if (!isLocal(displayItem) && !_checkManager.IsCurrentUserRemoteAdmin())
             {
                 // Dialog box that shows if a user attempts to edit a check as a non-admin
                 MessageBox.Show("Only administrators can edit non-local checks.", "Warning");
                 return;
             }
 
-            var name = isLocalCheck ? selectedCheck.Name.Replace(localCheckPrefix, "") : selectedCheck.Name;
-            var checkDir = isLocalCheck
+            var checkDir = isLocal(displayItem)
                 ? _checkManager.GetLocalRepoDirectory()
                 : _checkManager.GetInstalledChecksDirectory();
 
             // Get the file location for the selected check
-            var fileName = _checkManager.GetCheckAndFixItemFilename(selectedCheck.Item);
+            var fileName = _checkManager.GetCheckAndFixItemFilename(displayItem.Item);
             var fullPath = Path.Combine(checkDir, fileName);
 
             // Open the CheckEditor with the selected check
-            new CheckEditor(new FileInfo(fullPath), !isLocalCheck).ShowDialog(this);
+            new CheckEditor(_checkManager, new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
 
             UpdateDisplayItems();
         }
@@ -1004,7 +984,7 @@ namespace TvpMain.Forms
         /// <param name="e"></param>
         private void tryToReconnectButton_Click(object sender, EventArgs e)
         {
-            _connectForm.Show();
+            _connectProgressForm.Show(this);
             ConnectAndSync();
         }
 
@@ -1021,7 +1001,7 @@ namespace TvpMain.Forms
             {
                 if (!HostUtil.Instance.IsOnline || (!forceSync && CheckManager.HasSyncRun))
                 {
-                    _progressForm.Hide(); // Ensure that the synchronization form is hidden if it was shown elsewhere.
+                    _syncProgressForm.Hide(); // Ensure that the synchronization form is hidden if it was shown elsewhere.
                     return;
                 };
                 PrepForSync();
@@ -1050,7 +1030,7 @@ namespace TvpMain.Forms
         {
             UpdateOnlineStatus();
             Enabled = true;
-            _connectForm.Hide();
+            _connectProgressForm.Hide();
         }
         
         /// <summary>
@@ -1070,7 +1050,7 @@ namespace TvpMain.Forms
         private void EndCheckSynchronization()
         {
             Enabled = true;
-            _progressForm.Hide();
+            _syncProgressForm.Hide();
         }
 
         /// <summary>
@@ -1084,9 +1064,6 @@ namespace TvpMain.Forms
             {
                 // sync with repo
                 _checkManager.SynchronizeInstalledChecks();
-                UpdateRefreshTooltip(DateTime.Now);
-                CheckManager.HasSyncRun = true;
-                refreshButton.Enabled = true;
             }
             catch (AmazonServiceException)
             {
@@ -1102,7 +1079,11 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void SynchronizationWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            checksList.Invoke(new MethodInvoker(UpdateDisplayItems));
+            UpdateRefreshTooltip(DateTime.Now);
+            CheckManager.HasSyncRun = true;
+            refreshButton.Enabled = true;
+            UpdateDisplayItems();
+            //checksList.Invoke(new MethodInvoker(UpdateDisplayItems));
             EndCheckSynchronization();
         }
 
@@ -1116,7 +1097,6 @@ namespace TvpMain.Forms
 
             if (HostUtil.Instance.IsOnline)
             {
-                _isCurrentUserTvpAdmin = HostUtil.Instance.IsCurrentUserTvpAdmin();
                 Text = onlineWindowLabel;
             }
             else
@@ -1136,7 +1116,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
+        private void deleteContextMenuItem_Click(object sender, EventArgs e)
         {
             deleteSelectedRows();
         }
@@ -1171,10 +1151,10 @@ namespace TvpMain.Forms
                 _checkManager.DeleteCheckAndFixItem(checkItem);
                 _localChecks.Remove(checkItem);
             }
-            else if (_remoteChecks.Contains(checkItem))
+            else if (_installedChecks.Contains(checkItem))
             {
                 _checkManager.UnpublishAndUninstallCheckAndFixItem(checkItem);
-                _remoteChecks.Remove(checkItem);
+                _installedChecks.Remove(checkItem);
             }
             checksList.Rows.RemoveAt(rowIndex);
 
@@ -1262,7 +1242,6 @@ namespace TvpMain.Forms
                     var rowData = (DisplayItem)e.Row.Tag;
                     rowData.Selected = e.Row.Selected;
                 }
-                e.Row.Cells["CFSelected"].Value = e.Row.Selected;
 
                 runChecksButton.Enabled = !inactiveChecksAreSelected(e.Row.DataGridView);
             }
@@ -1272,7 +1251,8 @@ namespace TvpMain.Forms
         /// Handles right mouse button clicks.
         /// - When an unselected row is right clicked, select it and unselect all other rows.
         /// - If an item row is right-clicked enable the context menu.
-        /// - Disable the delete option if none of the selected rows are deleteable
+        /// - Disable the edit option if the selected row is not editable.
+        /// - Disable the delete option if any of the selected rows are not deleteable
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
@@ -1286,13 +1266,18 @@ namespace TvpMain.Forms
                 if (!row.Selected)
                 {
                     row.DataGridView.ClearSelection();
-                    row.DataGridView.CurrentCell = row.Cells["CFSelected"];
+                    row.DataGridView.CurrentCell = row.Cells[0];
                     row.Selected = true;
                 }
 
                 // If a data row is right clicked enable the context menu.
                 checksList.ContextMenuStrip = checksListContextMenu;
 
+                if (checksList.SelectedRows.Count != 1 ||
+                    !RowIsEditable(checksList.SelectedRows[0]))
+                {
+                    editContextMenuItem.Enabled = false;
+                }
                 // Disable the delete option on the context menu if any selected rows are not deleteable
                 if (!AllSelectedRowsAreDeletable())
                 {
@@ -1312,6 +1297,29 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
+        /// Checks whether this row is editable. 
+        /// </summary>
+        /// <param name="row">The row to check.</param>
+        /// <returns>true if the row is editable. false otherwise.</returns>
+        private bool RowIsEditable(DataGridViewRow row)
+        {
+            var item = (DisplayItem)row.Tag;
+            // Built-in checks cannot be edited.
+            if (isBuiltIn(item))
+            {
+                return false;
+            }
+
+            // Non-admins can only edit local checks.
+            if (!isLocal(item) && !_checkManager.IsCurrentUserRemoteAdmin())
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Checks whether a row in the checks list is deletable.
         /// </summary>
         /// <param name="row">The row to check</param>
@@ -1319,7 +1327,7 @@ namespace TvpMain.Forms
         private bool RowIsDeletable(DataGridViewRow row)
         {
             var item = row.Tag as DisplayItem;
-            if (item == null || item.Name.StartsWith(BUILTIN_CHECKS_PREFIX))
+            if (item == null || isBuiltIn(item))
             {
                 return false;
             }
@@ -1351,7 +1359,83 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void checksListContextMenu_Closed(object sender, ToolStripDropDownClosedEventArgs e)
         {
+            editContextMenuItem.Enabled = true;
             deleteContextMenuItem.Enabled = true;
+        }
+
+        /// <summary>
+        /// Start the check/fix editor from the menu
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void newCheckMenuItem_Click(object sender, EventArgs e)
+        {
+            new CheckEditor(_checkManager).ShowDialog(this);
+            UpdateDisplayItems();
+        }
+
+        /// <summary>
+        /// Handles the Options menu item. Opens the Options form to modify TVP settings.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void optionsMenuItem_Click(object sender, EventArgs e)
+        {
+            TvpOptions oldOptions = _optionsManager.LoadOptions();
+            var form = new OptionsForm(oldOptions);
+            DialogResult result = form.ShowDialog(this);
+            if (result == DialogResult.OK && form.HasChanges())
+            {
+                TvpOptions newOptions = form.getOptions();
+                _optionsManager.SaveOptions(newOptions);
+                _checkManager.SetupRemoteRepository();
+                string error;
+                if (!_checkManager.RemoteRepositoryIsVerified(out error) && !String.IsNullOrEmpty(error))
+                {
+                    var message = "The shared repository has been disabled because the settings could not be " +
+                        $"verified. See the message below for more information.\n\n{error}";
+                    MessageBox.Show(message, "Verification Failed");
+                }
+                else if (_checkManager.RemoteRepositoryIsEnabled())
+                {
+                    refreshButton.Visible = true;
+                    ConnectAndSync(true);
+                }
+                else
+                {
+                    refreshButton.Visible = false;
+                    UpdateDisplayItems();
+                    UpdateDisplayGrid();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles the Edit context menu item. Opens a check in the check editor form.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void editContextMenuItem_Click(object sender, EventArgs e)
+        {
+            if (checksList.SelectedRows.Count != 1 || !RowIsEditable(checksList.SelectedRows[0]))
+            {
+                return;
+            }
+
+            var displayItem = (DisplayItem)checksList.SelectedRows[0].Tag;
+
+            var checkDir = isLocal(displayItem)
+                ? _checkManager.GetLocalRepoDirectory()
+                : _checkManager.GetInstalledChecksDirectory();
+
+            // Get the file location for the selected check
+            var fileName = _checkManager.GetCheckAndFixItemFilename(displayItem.Item);
+            var fullPath = Path.Combine(checkDir, fileName);
+
+            // Open the CheckEditor with the selected check
+            new CheckEditor(_checkManager, new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
+
+            UpdateDisplayItems();
         }
     }
 }

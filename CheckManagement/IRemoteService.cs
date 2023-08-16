@@ -54,5 +54,13 @@ namespace TvpMain.CheckManagement
         /// <param name="filename">The name of the file to delete from the remote repository.</param>
         /// <returns>The <c>HttpStatusCode</c> returned by the remote repository.</returns>
         HttpStatusCode DeleteFile(string filename);
+
+        /// <summary>
+        /// Tests the settings for this service to ensure that a connection can be made and that
+        /// the credentials have the needed permissions.
+        /// </summary>
+        /// <param name="error">Error message for the last test that failed.</param>
+        /// <returns>true if all tests pass without errors. false otherwise.</returns>
+        public bool Verify(out string error);
     }
 }

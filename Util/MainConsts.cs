@@ -118,6 +118,26 @@ namespace TvpMain.Util
         public const int HASH_PRIME = 397;
 
         /// <summary>
+        /// The name of the folder where configuration files are stored.
+        /// </summary>
+        public const string CONFIGURATION_FOLDER = "config";
+
+        /// <summary>
+        /// Name of the repository where local checks are stored.
+        /// </summary>
+        public const string LOCAL_REPO_NAME = "Local";
+
+        /// <summary>
+        /// Name of the repository where built-in checks are stored.
+        /// </summary>
+        public const string BUILTIN_REPO_NAME = "Built-in";
+
+        /// <summary>
+        /// Name of the repository where remote checks are stored.
+        /// </summary>
+        public const string REMOTE_REPO_NAME = "Remote";
+
+        /// <summary>
         /// The name of the file used to keep track of the last synchronization run.
         /// </summary>
         public const string LAST_SYNC_FILE_NAME = "lastSync";

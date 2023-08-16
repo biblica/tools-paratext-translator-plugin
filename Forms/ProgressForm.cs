@@ -159,5 +159,10 @@ namespace TvpMain.Forms
                 Activate();
             }
         }
+
+        private void ProgressForm_Load(object sender, EventArgs e)
+        {
+            CenterToParent();
+        }
     }
 }

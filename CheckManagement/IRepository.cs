@@ -7,6 +7,8 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+using Amazon.S3.Model;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TvpMain.Check;
@@ -18,6 +20,45 @@ namespace TvpMain.CheckManagement
     /// </summary>
     public interface IRepository
     {
+        /// <summary>
+        /// A unique identifier for the repository.
+        /// </summary>
+        public Guid Id { get; }
+
+        /// <summary>
+        /// The display name for the repository.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Determines if this repository is enabled
+        /// </summary>
+        public bool Enabled { get; set; }
+
+        /// <summary>
+        /// Should this repository be synchronized during TVP startup.
+        /// </summary>
+        public bool SyncOnStartup { get; set; }
+
+        /// <summary>
+        /// Determines if the specified user is in the list of administrators for this repository.
+        /// </summary>
+        /// <param name="user">The Paratext user name to check.</param>
+        /// <returns>true if user is in the admin list. false otherwise.</returns>
+        public bool IsAdmin(string user);
+
+        /// <summary>
+        /// A list of admin user names for this repository.
+        /// </summary>
+        public List<string> Admins { get; }
+
+        /// <summary>
+        /// Uploads a new admin list consisting of a single user. 
+        /// Warning: this will overwrite an existing admin list.
+        /// </summary>
+        /// <param name="userName">The user name of the admin.</param>
+        public void SetAdmin(string userName);
+
         /// <summary>
         /// This method gets <c>CheckAndFixItem</c>s from a repository.
         /// </summary>
@@ -44,5 +85,30 @@ namespace TvpMain.CheckManagement
         /// </summary>
         /// <param name="filename">The <c>CheckAndFixItem</c> to remove.</param>
         public void RemoveCheckAndFixItem(string filename);
+
+        /// <summary>
+        /// Deletes all checks from this repository.
+        /// </summary>
+        /// <returns>true if the files were successfully deleted. false otherwise.</returns>
+        public bool Clear();
+
+        /// <summary>
+        /// Tests the settings for this repository to ensure that a connection can be made 
+        /// and that the credentials have the needed permissions.
+        /// </summary>
+        /// <param name="error">An explanation of why the verification failed.</param>
+        /// <returns>true if verification was successful. false otherwise.</returns>
+        public bool Verify();
+
+        /// <summary>
+        /// Whether the repository connection and credentials have been tested successfully.
+        /// </summary>
+        public bool Verified { get; }
+
+        /// <summary>
+        /// An explanation of why verification failed or empty string if verification has 
+        /// not been attempted yet.
+        /// </summary>
+        public string VerificationError { get; }
     }
 }

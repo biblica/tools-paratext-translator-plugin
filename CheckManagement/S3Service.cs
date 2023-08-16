@@ -10,10 +10,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
+using SIL.Extensions;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Windows.Input;
 using TVPMain.Util;
 
 namespace TvpMain.CheckManagement
@@ -24,19 +30,23 @@ namespace TvpMain.CheckManagement
     public class S3Service : IRemoteService
     {
         // AWS configuration parameters.
-        string accessKey = AWSCredentials.AWS_TVP_ACCESS_KEY_ID;
-        string secretKey = AWSCredentials.AWS_TVP_ACCESS_KEY_SECRET;
-        RegionEndpoint region = RegionEndpoint.GetBySystemName(AWSCredentials.AWS_TVP_REGION) ?? RegionEndpoint.USEast1;
-        public virtual string BucketName { get; set; } = AWSCredentials.AWS_TVP_BUCKET_NAME;
+        private string _accessKey;
+        private string _secretKey;
+        private RegionEndpoint _region;
+        public virtual string BucketName { get; set; }
 
         /// <summary>
         /// The client used to communicate with S3.
         /// </summary>
         public virtual AmazonS3Client S3Client { get; set; }
 
-        public S3Service()
+        public S3Service(string accessKey, string secretKey, string region, string bucket)
         {
-            S3Client = new AmazonS3Client(accessKey, secretKey, region);
+            _accessKey = accessKey;
+            _secretKey = secretKey;
+            _region = RegionEndpoint.GetBySystemName(region) ?? RegionEndpoint.USEast1;
+            BucketName = bucket;
+            S3Client = new AmazonS3Client(_accessKey, _secretKey, _region);
         }
 
         public List<string> ListAllFiles()
@@ -116,5 +126,122 @@ namespace TvpMain.CheckManagement
 
             return deleteObjectResponse.HttpStatusCode;
         }
+
+        /// <summary>
+        /// Tests the settings for this service to ensure that a connection can be made and that
+        /// the credentials have the needed permissions.
+        /// </summary>
+        /// <param name="error">Error message for the last test that failed.</param>
+        /// <returns>true if all tests pass without errors. false otherwise.</returns>
+        public bool Verify(out string error)
+        {
+            var testFile = Guid.NewGuid().ToString();
+
+            if (_region.DisplayName == "Unknown")
+            {
+                error = "Unknown AWS region. Please enter a valid AWS region.";
+                return false;
+            }
+
+            try
+            {
+                byte[] byteArray = Encoding.UTF8.GetBytes(testFile);
+                MemoryStream stream = new MemoryStream(byteArray); 
+                var putResult = PutFileStream(testFile, stream);
+            }
+            catch (Exception ex)
+            {
+                error = $"Could not write file to bucket '{BucketName}'. {ex.Message}";
+                return false;
+            }
+
+            try
+            {
+                var listResult = ListAllFiles();
+            }
+            catch (Exception ex)
+            {
+                error = $"Could not list files in bucket '{BucketName}'. {ex.Message}";
+                return false;
+            }
+
+            try
+            {
+                var getResult = GetFileStream(testFile);
+            }
+            catch (Exception ex)
+            {
+                error = $"Could not read file from bucket '{BucketName}'. {ex.Message}";
+                return false;
+            }
+
+            try
+            {
+                var deleteResult = DeleteFile(testFile);
+            }
+            catch (Exception ex)
+            {
+                error = $"Could not delete file from bucket '{BucketName}'. {ex.Message}";
+                return false;
+            }
+
+            error = "";
+            return true;
+        }
+
+        /// <summary>
+        /// Validates that a string is in the correct format for an AWS access key.
+        /// It does not guarantee that it is a valid key that actually exists in AWS.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        public static bool ValidateAccessKey(string key)
+        {
+            Regex regex = new Regex(@"^[A-Z0-9]{20}$");
+
+            return regex.IsMatch(key);
+        }
+
+        /// <summary>
+        /// Validates that a string is in the correct format for an AWS access key.
+        /// It does not guarantee that it is a valid key that actually exists in AWS.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        public static bool ValidateSecretKey(string key)
+        {
+            Regex regex = new Regex(@"^[A-Za-z0-9/+=]{40}$");
+
+            return regex.IsMatch(key);
+        }
+
+        /// <summary>
+        /// Validates that a string is in the correct format for an Amazon S3 bucket name.
+        /// It does not guarantee that it is a valid S3 bucket that actually exists in AWS.
+        /// reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        public static bool ValidateS3BucketName(string bucket)
+        {
+            Regex regex = new Regex(@"^[0-9a-z][0-9a-z.-]{1,61}[0-9a-z]$");
+
+            return regex.IsMatch(bucket);
+        }
+
+        /// <summary>
+        /// Validates that a string is in the correct format for an AWS region name based
+        /// on existing regions. It does not guarantee that it is the name of a valid 
+        /// AWS region that actually exists in AWS.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        public static bool ValidateAwsRegion(string region)
+        {
+            Regex regex = new Regex(@"^[a-z]{2}[-][a-z]{1,15}[-][1-9]$");
+
+            return regex.IsMatch(region);
+        }
+
     }
 }

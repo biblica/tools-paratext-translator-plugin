@@ -398,9 +398,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="CheckManagement\IRemoteService.cs" />
     <Compile Include="CheckManagement\IRepository.cs" />
     <Compile Include="CheckManagement\LocalRepository.cs" />
+    <Compile Include="CheckManagement\S3RepositoryOptions.cs" />
     <Compile Include="CheckManagement\S3Service.cs" />
     <Compile Include="CheckManagement\S3Repository.cs" />
-    <Compile Include="CheckManagement\S3ServiceProvider.cs" />
     <Compile Include="Check\CheckAndFixItem.cs" />
     <Compile Include="Check\CheckAndFixRunner.cs" />
     <Compile Include="Check\CheckArea.cs" />
@@ -442,6 +442,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Forms\LicenseForm.Designer.cs">
       <DependentUpon>LicenseForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\OptionsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\OptionsForm.Designer.cs">
+      <DependentUpon>OptionsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\RunChecks.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -451,8 +457,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Import\ImportManager.cs" />
     <Compile Include="Project\BookNameItem.cs" />
     <Compile Include="Project\FileManager.cs" />
+    <Compile Include="Project\OptionsManager.cs" />
     <Compile Include="Project\ProjectCheckSettings.cs" />
     <Compile Include="Project\ProjectUserAccess.cs" />
+    <Compile Include="Project\TvpOptions.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -517,6 +525,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\LicenseForm.resx">
       <DependentUpon>LicenseForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\OptionsForm.resx">
+      <DependentUpon>OptionsForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\RunChecks.resx">
       <DependentUpon>RunChecks.cs</DependentUpon>
@@ -589,6 +600,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <PostBuildEvent>mkdir "$(TargetDir)zip\runtimes\win-x64\native"
 mkdir "$(TargetDir)zip\installed-checks"
 mkdir "$(TargetDir)zip\local-checks"
+mkdir "$(TargetDir)zip\config"
 copy *.dll "$(TargetDir)zip"
 move "$(TargetDir)zip\ClearScriptV8.win-x64.dll" "$(TargetDir)zip\runtimes\win-x64\native"
 copy *.pdb "$(TargetDir)zip"

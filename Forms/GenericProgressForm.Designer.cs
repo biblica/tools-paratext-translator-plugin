@@ -68,8 +68,8 @@ namespace TvpMain.Forms
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Processing...";
-            this.TopMost = true;
             this.UseWaitCursor = true;
+            this.Load += new System.EventHandler(this.GenericProgressForm_Load);
             this.ResumeLayout(false);
 
         }
