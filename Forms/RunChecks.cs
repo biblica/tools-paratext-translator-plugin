@@ -72,6 +72,11 @@ namespace TvpMain.Forms
         private BookNameItem[] _selectedBooks;
 
         /// <summary>
+        /// Access to checks repository options
+        /// </summary>
+        readonly OptionsManager _optionsManager;
+
+        /// <summary>
         /// Access to the checks themselves
         /// </summary>
         readonly ICheckManager _checkManager;
@@ -131,7 +136,8 @@ namespace TvpMain.Forms
             InitializeComponent();
             _syncProgressForm = new GenericProgressForm("Synchronizing Check/Fixes");
             _connectProgressForm = new GenericProgressForm("Checking Connection ...");
-            _checkManager = new CheckManager();
+            _optionsManager = new OptionsManager();
+            _checkManager = new CheckManager(_optionsManager);
 
             // set up the needed service dependencies
             _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -944,7 +950,7 @@ namespace TvpMain.Forms
             var fullPath = Path.Combine(checkDir, fileName);
 
             // Open the CheckEditor with the selected check
-            new CheckEditor(new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
+            new CheckEditor(_checkManager, new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
 
             UpdateDisplayItems();
         }
@@ -1365,7 +1371,7 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void newCheckMenuItem_Click(object sender, EventArgs e)
         {
-            new CheckEditor().ShowDialog(this);
+            new CheckEditor(_checkManager).ShowDialog(this);
             UpdateDisplayItems();
         }
 
@@ -1376,13 +1382,13 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void optionsMenuItem_Click(object sender, EventArgs e)
         {
-            TvpOptions oldOptions = OptionsManager.LoadOptions();
+            TvpOptions oldOptions = _optionsManager.LoadOptions();
             var form = new OptionsForm(oldOptions);
             DialogResult result = form.ShowDialog(this);
             if (result == DialogResult.OK && form.HasChanges())
             {
                 TvpOptions newOptions = form.getOptions();
-                OptionsManager.SaveOptions(newOptions);
+                _optionsManager.SaveOptions(newOptions);
                 _checkManager.SetupRemoteRepository();
                 string error;
                 if (!_checkManager.RemoteRepositoryIsVerified(out error) && !String.IsNullOrEmpty(error))
@@ -1428,7 +1434,7 @@ namespace TvpMain.Forms
             var fullPath = Path.Combine(checkDir, fileName);
 
             // Open the CheckEditor with the selected check
-            new CheckEditor(new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
+            new CheckEditor(_checkManager, new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
 
             UpdateDisplayItems();
         }

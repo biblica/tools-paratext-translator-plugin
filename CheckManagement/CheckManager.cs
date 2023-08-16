@@ -28,11 +28,25 @@ namespace TvpMain.CheckManagement
     /// </summary>
     public class CheckManager : ICheckManager
     {
+        private readonly OptionsManager _optionsManager;
         private readonly IRepository _installedChecksRepository;
         private readonly IRepository _localRepository;
         private IRepository _remoteRepository = null;
         private static readonly string SyncStatusFileName =
             $"{Directory.GetCurrentDirectory()}\\{MainConsts.TVP_FOLDER_NAME}\\{MainConsts.LAST_SYNC_FILE_NAME}";
+
+        /// <summary>
+        /// Default constructor for CheckManager
+        /// </summary>
+        public CheckManager(OptionsManager optionsManager)
+        {
+            _optionsManager = optionsManager;
+            _installedChecksRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
+                MainConsts.INSTALLED_CHECK_FOLDER_NAME));
+            _localRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
+                MainConsts.LOCAL_CHECK_FOLDER_NAME));
+            SetupRemoteRepository();
+        }
 
         /// <summary>
         /// Keeps track of whether a sync has run during this ParaText session.
@@ -79,23 +93,11 @@ namespace TvpMain.CheckManagement
         }
 
         /// <summary>
-        /// Default constructor for CheckManager
-        /// </summary>
-        public CheckManager()
-        {
-            _installedChecksRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
-                MainConsts.INSTALLED_CHECK_FOLDER_NAME));
-            _localRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
-                MainConsts.LOCAL_CHECK_FOLDER_NAME));
-           SetupRemoteRepository();
-        }
-
-        /// <summary>
         /// Sets up the remote S3 repository based on settings in the TVP options file.  
         /// </summary>
-        public void SetupRemoteRepository()
+        public virtual void SetupRemoteRepository()
         {
-            var options = OptionsManager.LoadOptions();
+            var options = _optionsManager.LoadOptions();
             if (options.SharedRepositories.Count > 0)
             {
                 _remoteRepository = new S3Repository(options.SharedRepositories[0]);
@@ -109,7 +111,7 @@ namespace TvpMain.CheckManagement
                         options.SharedRepositories[0].Enabled = false;
                         _installedChecksRepository.Clear();
                     }
-                    OptionsManager.SaveOptions(options);
+                    _optionsManager.SaveOptions(options);
                 }
                 // If no permissions file exists for this repository, make the current user the admin. 
                 if (_remoteRepository.Enabled && _remoteRepository.Admins.Count < 1)

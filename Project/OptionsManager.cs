@@ -12,25 +12,39 @@ using TvpMain.Util;
 
 namespace TvpMain.Project
 {
-    internal class OptionsManager
+    public class OptionsManager
     {
         /// <summary>
         /// The name of the file where plugin options are stored.
         /// </summary>
         public const string OPTIONS_FILE_NAME = "Options.xml";
 
-        private static TvpOptions _options = null;
+        private TvpOptions _options = null;
 
         /// <summary>
         /// The full path to the file where TVP options are stored.
         /// </summary>
-        private static string _optionsFilePath = Path.Combine(Directory.GetCurrentDirectory(),
-                MainConsts.TVP_FOLDER_NAME, MainConsts.CONFIGURATION_FOLDER, OPTIONS_FILE_NAME);
+        private string _optionsFilePath;
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        public OptionsManager() : this (Path.Combine(Directory.GetCurrentDirectory(),MainConsts.TVP_FOLDER_NAME, MainConsts.CONFIGURATION_FOLDER))
+        {
+        }
+
+        /// <summary>
+        /// Constructor for specified .
+        /// </summary>
+        public OptionsManager(string configurationFolder)
+        {
+            _optionsFilePath = Path.Combine(configurationFolder, OPTIONS_FILE_NAME);
+        }
 
         /// <summary>
         /// Loads TVP options from the options file.
         /// </summary>
-        public static TvpOptions LoadOptions()
+        public TvpOptions LoadOptions()
         {
             FileStream optionsFile;
             var serializer = new XmlSerializer(typeof(TvpOptions));
@@ -55,7 +69,7 @@ namespace TvpMain.Project
         /// Saves TVP options to an xml file.
         /// </summary>
         /// <param name="options">The options to save</param>
-        public static void SaveOptions(TvpOptions options)
+        public void SaveOptions(TvpOptions options)
         {
             var serializer = new XmlSerializer(options.GetType());
             using var file = File.Create(_optionsFilePath);

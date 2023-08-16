@@ -80,20 +80,20 @@ namespace TvpMain.Forms
         /// <summary>
         /// Default constructor
         /// </summary>
-        public CheckEditor()
+        public CheckEditor(ICheckManager checkManager)
         {
             InitializeComponent();
-            _checkManager = new CheckManager();
+            _checkManager = checkManager;
         }
         /// <summary>
         /// Constructor for opening with a specific check loaded
         /// </summary>
         /// <param name="checkAndFixFile">The file to open in the editor.</param>
         /// <param name="isRemote">Whether the file represents a remote check. (Default = false)</param>
-        public CheckEditor(FileInfo checkAndFixFile, bool isRemote = false)
+        public CheckEditor(ICheckManager checkManager, FileInfo checkAndFixFile, bool isRemote = false)
         {
             InitializeComponent();
-            _checkManager = new CheckManager();
+            _checkManager = checkManager;
             IsRemote = isRemote;
 
             using var fileStream = checkAndFixFile.OpenRead();

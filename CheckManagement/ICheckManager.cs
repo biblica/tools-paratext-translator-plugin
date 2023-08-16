@@ -29,7 +29,7 @@ namespace TvpMain.CheckManagement
     /// "Installed/Uninstalled" <c>CheckAndFixItem</c>s are those which have been persisted to the local filesystem from a remote repository.
     /// "Saved/Deleted" <c>CheckAndFixItem</c>s are those which have been developed locally and only exist locally.
     /// </summary>
-    interface ICheckManager
+    public interface ICheckManager
     {
         /// <summary>
         /// Sets up the remote S3 repository based on settings in the TVP options file.

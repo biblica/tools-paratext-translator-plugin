@@ -9,10 +9,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using TvpMain.Check;
 using TvpMain.CheckManagement;
+using TvpMain.Project;
 using TvpMain.Util;
 
 namespace TvpTest
@@ -20,7 +22,20 @@ namespace TvpTest
     [TestClass()]
     public class CheckManagerTests
     {
-        Mock<CheckManager> checkManager = new Mock<CheckManager>();
+        Mock<CheckManager> checkManager;
+
+        static readonly string TestOptionsManagerConfigDirectory = @"Resources\TestOptionsManagerConfig";
+
+
+        [TestInitialize]
+        public void Setup()
+        {
+            OptionsManager optionsManager = new OptionsManager(TestOptionsManagerConfigDirectory);
+
+            checkManager = new Mock<CheckManager>(optionsManager) { CallBase = true };
+            // make SetupRemoteRepository do nothing
+            checkManager.Setup(cm => cm.SetupRemoteRepository()).Callback(() => { });
+        }
 
         /// <summary>
         /// This test verifies that <c>GetOutdatedCheckAndFixItems</c> correctly matches checks that were locally installed with their remote counterparts, and returns them if there is an updated version available.
@@ -116,6 +131,7 @@ namespace TvpTest
         {
             // Create three basic checks--one of which is the latest update of another
             string testName = "check";
+
             CheckAndFixItem installedCheckA = new CheckAndFixItem
             {
                 Name = testName,
@@ -123,11 +139,13 @@ namespace TvpTest
             };
             CheckAndFixItem availableCheckA_Old = new CheckAndFixItem
             {
+                Id = installedCheckA.Id,
                 Name = testName,
                 Version = "1.0.0.1"
             };
             CheckAndFixItem availableCheckA_New = new CheckAndFixItem
             {
+                Id = installedCheckA.Id,
                 Name = testName,
                 Version = "1.0.0.2"
             };
@@ -145,7 +163,6 @@ namespace TvpTest
 
             // Verify that only the latest version is considered.
             checkManager.Setup(cm => cm.IsNewVersion(It.IsAny<CheckAndFixItem>(), It.IsAny<CheckAndFixItem>())).Returns(true);
-            checkManager.Setup(cm => cm.GetOutdatedCheckAndFixItems()).CallBase();
             var outdatedItems = checkManager.Object.GetOutdatedCheckAndFixItems();
 
             Assert.IsTrue(outdatedItems.ContainsKey(installedCheckA));
@@ -170,6 +187,7 @@ namespace TvpTest
             // Set up the checks to compare against the base check.
             CheckAndFixItem sameVersion = new CheckAndFixItem
             {
+                Id = check.Id,
                 Name = check.Name,
                 Version = check.Version
             };
@@ -180,11 +198,13 @@ namespace TvpTest
             };
             CheckAndFixItem oldVersion = new CheckAndFixItem
             {
+                Id = check.Id,
                 Name = check.Name,
                 Version = "1.0.0.0"
             };
             CheckAndFixItem newVersion = new CheckAndFixItem
             {
+                Id = check.Id,
                 Name = check.Name,
                 Version = "1.0.0.2"
             };
@@ -279,7 +299,8 @@ namespace TvpTest
             // This check is identical and nothing will change.
             CheckAndFixItem localCheckAlpha = new CheckAndFixItem
             {
-                Name = "Alpha",
+                Id = remoteCheckAlpha.Id,
+                Name = remoteCheckAlpha.Name,
                 Version = "1.0.0.0",
                 Description = "Local Alpha"
             };
@@ -287,7 +308,8 @@ namespace TvpTest
             // This check is outdated and will be uninstalled.
             CheckAndFixItem localCheckGamma = new CheckAndFixItem
             {
-                Name = "Gamma",
+                Id = remoteCheckGamma.Id,
+                Name = remoteCheckGamma.Name,
                 Version = "1.0.0.0",
                 Description = "Local Gamma"
             };
@@ -300,10 +322,7 @@ namespace TvpTest
                 Description = "Local Delta"
             };
 
-            checkManager.Setup(cm => cm.SynchronizeInstalledChecks(false)).CallBase();
-            checkManager.Setup(cm => cm.GetInstalledCheckAndFixItems()).CallBase();
-            checkManager.Setup(cm => cm.InstallCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
-            checkManager.Setup(cm => cm.UninstallCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
+            checkManager.Setup(cm => cm.GetAvailableCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>());
             checkManager.Setup(cm => cm.GetNewCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
             {
                 remoteCheckBeta
@@ -332,13 +351,13 @@ namespace TvpTest
             Assert.IsTrue(installedChecks.Contains(localCheckDelta));
 
             //Synchronize the repository.
-            checkManager.Object.SynchronizeInstalledChecks();
+            checkManager.Object.SynchronizeInstalledChecks(true);
 
             // Re-inspect the repository.
             installedChecks = checkManager.Object.GetInstalledCheckAndFixItems();
 
             // Ensure that checks have been updated and uninstalled as expected.
-            Assert.IsTrue(installedChecks.Count == 3);
+            Assert.AreEqual(3, installedChecks.Count);
             Assert.IsTrue(installedChecks.Contains(localCheckAlpha));
             Assert.IsTrue(installedChecks.Contains(remoteCheckBeta));
             Assert.IsTrue(installedChecks.Contains(remoteCheckGamma));
@@ -359,6 +378,7 @@ namespace TvpTest
             // Has an updated description.
             CheckAndFixItem secondVersion = new CheckAndFixItem
             {
+                Id = firstVersion.Id,
                 Name = firstVersion.Name,
                 Version = "1.0.0.0",
                 Description = "A new description"
@@ -366,6 +386,7 @@ namespace TvpTest
             // Has an updated version number.
             CheckAndFixItem thirdVersion = new CheckAndFixItem
             {
+                Id = firstVersion.Id,
                 Name = firstVersion.Name,
                 Version = "1.0.0.3",
                 Description = "A new description"
