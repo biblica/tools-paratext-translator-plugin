@@ -322,18 +322,11 @@ namespace TvpTest
                 Description = "Local Delta"
             };
 
-            checkManager.Setup(cm => cm.GetAvailableCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>());
-            checkManager.Setup(cm => cm.GetNewCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
+            checkManager.Setup(cm => cm.GetAvailableCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>()
             {
-                remoteCheckBeta
-            });
-            checkManager.Setup(cm => cm.GetDeprecatedCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
-            {
-                localCheckDelta
-            });
-            checkManager.Setup(cm => cm.GetOutdatedCheckAndFixItems()).Returns(() => new Dictionary<CheckAndFixItem, CheckAndFixItem>
-            {
-                [localCheckGamma] = remoteCheckGamma
+                remoteCheckAlpha,
+                remoteCheckBeta,
+                remoteCheckGamma
             });
 
             // Install the checks that exist at the beginning of the test.
@@ -351,7 +344,7 @@ namespace TvpTest
             Assert.IsTrue(installedChecks.Contains(localCheckDelta));
 
             //Synchronize the repository.
-            checkManager.Object.SynchronizeInstalledChecks(true);
+            checkManager.Object.SynchronizeInstalledChecks();
 
             // Re-inspect the repository.
             installedChecks = checkManager.Object.GetInstalledCheckAndFixItems();

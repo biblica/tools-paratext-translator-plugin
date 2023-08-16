@@ -893,7 +893,6 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void RefreshButton_Click(object sender, EventArgs e)
         {
-            PrepForSync(); // Update the UI immediately so that it doesn't appear to hang during connection check.
             ConnectAndSync(true);
         }
         
