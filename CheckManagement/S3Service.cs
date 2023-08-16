@@ -18,6 +18,8 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Windows.Input;
 using TVPMain.Util;
 
 namespace TvpMain.CheckManagement
@@ -159,7 +161,7 @@ namespace TvpMain.CheckManagement
             }
             catch (Exception ex)
             {
-                error = $"Could list files in bucket '{BucketName}'. {ex.Message}";
+                error = $"Could not list files in bucket '{BucketName}'. {ex.Message}";
                 return false;
             }
 
@@ -196,14 +198,8 @@ namespace TvpMain.CheckManagement
         public static bool ValidateAccessKey(string key)
         {
             Regex regex = new Regex(@"^[A-Z0-9]{20}$");
-            if (regex.IsMatch(key))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+
+            return regex.IsMatch(key);
         }
 
         /// <summary>
@@ -215,14 +211,8 @@ namespace TvpMain.CheckManagement
         public static bool ValidateSecretKey(string key)
         {
             Regex regex = new Regex(@"^[A-Za-z0-9/+=]{40}$");
-            if (regex.IsMatch(key))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+
+            return regex.IsMatch(key);
         }
 
         /// <summary>
@@ -235,14 +225,8 @@ namespace TvpMain.CheckManagement
         public static bool ValidateS3BucketName(string bucket)
         {
             Regex regex = new Regex(@"^[0-9a-z][0-9a-z.-]{1,61}[0-9a-z]$");
-            if (regex.IsMatch(bucket))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+
+            return regex.IsMatch(bucket);
         }
 
         /// <summary>
@@ -255,14 +239,8 @@ namespace TvpMain.CheckManagement
         public static bool ValidateAwsRegion(string region)
         {
             Regex regex = new Regex(@"^[a-z]{2}[-][a-z]{1,15}[-][1-9]$");
-            if (regex.IsMatch(region))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+
+            return regex.IsMatch(region);
         }
 
     }
