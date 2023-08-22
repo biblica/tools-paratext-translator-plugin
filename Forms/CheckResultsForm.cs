@@ -98,10 +98,12 @@ namespace TvpMain.Forms
         /// </summary>
         private readonly ResultManager _resultManager;
 
+        private List<IRunnable> Runnables { get; }
+
         /// <summary>
         /// A collection of the <c>CheckAndFixItem</c>s to run against the content.
         /// </summary>
-        private List<CheckAndFixItem> ChecksToRun { get; }
+        private List<CheckAndFixItem> ChecksToRun { get; } = new List<CheckAndFixItem>();
 
         /// <summary>
         /// The checks organized by check scope.
@@ -173,7 +175,7 @@ namespace TvpMain.Forms
             string activeProjectName,
             ProjectManager projectManager,
             BookNameItem[] selectedBooks,
-            List<CheckAndFixItem> checksToRun,
+            List<IRunnable> runnables,
             CheckRunContext checkRunContext)
         {
             // validate inputs
@@ -186,7 +188,11 @@ namespace TvpMain.Forms
             ActiveProjectName = activeProjectName;
             ProjectManager = projectManager ?? throw new ArgumentNullException(nameof(projectManager));
             SelectedBooks = selectedBooks ?? throw new ArgumentNullException(nameof(selectedBooks));
-            ChecksToRun = checksToRun ?? throw new ArgumentNullException(nameof(checksToRun));
+            Runnables = runnables ?? throw new ArgumentNullException(nameof(runnables));
+            foreach (IRunnable runnable in runnables)
+            {
+                ChecksToRun.AddRange(runnable.Checks);
+            }
             CheckRunContext = checkRunContext ?? throw new ArgumentNullException(nameof(checkRunContext));
 
             _progressForm = InitializeProgressForm();
@@ -648,7 +654,7 @@ namespace TvpMain.Forms
                                 // check the verse with verse checks
                                 ExecuteChecksAndStoreResults(verseText, ChecksByScope[CheckScope.VERSE], currBookNum, currChapterNum, currVerseNum);
                             }
-                            catch (ArgumentException ae)
+                            catch (ArgumentException)
                             {
                                 // arg exceptions occur when verses are missing,
                                 // which they can be for given translations (ignore and move on)

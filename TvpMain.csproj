@@ -401,6 +401,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="CheckManagement\S3RepositoryOptions.cs" />
     <Compile Include="CheckManagement\S3Service.cs" />
     <Compile Include="CheckManagement\S3Repository.cs" />
+    <Compile Include="Check\CheckGroup.cs" />
     <Compile Include="Check\CheckAndFixItem.cs" />
     <Compile Include="Check\CheckAndFixRunner.cs" />
     <Compile Include="Check\CheckArea.cs" />
@@ -408,6 +409,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Check\CheckRunContext.cs" />
     <Compile Include="Check\CheckAndFixException.cs" />
     <Compile Include="Check\ICheckAndFixRunner.cs" />
+    <Compile Include="Check\IRunnable.cs" />
     <Compile Include="Check\ITextCheck.cs" />
     <Compile Include="Check\LocalCheckAndFixManager.cs" />
     <Compile Include="Check\TextCheckRunner.cs" />
@@ -429,7 +431,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Forms\CheckResultsForm.Designer.cs">
       <DependentUpon>CheckResultsForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\DisplayItem.cs" />
+    <Compile Include="Forms\GridRowData.cs" />
     <Compile Include="Forms\GenericProgressForm.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -15,7 +15,9 @@ using System.IO;
 using System.Linq;
 using System.Management.Instrumentation;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TvpMain.Check;
 using TvpMain.Util;
@@ -165,54 +167,68 @@ namespace TvpMain.CheckManagement
             return Admins.Contains(user);
         }
 
-        public void AddCheckAndFixItem(string filename, CheckAndFixItem item)
+        public void AddItem(string filename, IRunnable item)
         {
             if (String.IsNullOrEmpty(filename)) new ArgumentNullException(nameof(filename));
 
             Service.PutFileStream(filename, item.WriteToXmlStream());
         }
 
-        public async Task AddCheckAndFixItemAsync(string filename, CheckAndFixItem item)
+        public async Task AddItemAsync(string filename, IRunnable item)
         {
             if (String.IsNullOrEmpty(filename)) new ArgumentNullException(nameof(filename));
 
             await Service.PutFileStreamAsync(filename, item.WriteToXmlStream());
         }
 
-        public List<CheckAndFixItem> GetCheckAndFixItems()
+        public List<IRunnable> GetItems()
         {
-            var checkAndFixItems = new List<CheckAndFixItem>();
+            var items = new List<IRunnable>();
 
             // Whether the string represents an XML filename.
             // This is a simple way to guard against non-check files in the repository.
             static bool IsXmlFile(string filename) => filename.Trim().ToLowerInvariant().EndsWith(".xml");
             
-            var filenames = Service.ListAllFiles().Where((Func<string,bool>) IsXmlFile).ToList();
-            foreach (var file in filenames)
+            var fileNames = Service.ListAllFiles().Where((Func<string,bool>) IsXmlFile).ToList();
+            var checkRegex = new Regex($@"\.{Regex.Escape(CheckAndFixItem.FileExtension)}$");
+            var groupRegex = new Regex($@"\.{Regex.Escape(CheckGroup.FileExtension)}$");
+            foreach (var fileName in fileNames)
             {
-                using var fileStream = Service.GetFileStream(file);
-                var checkAndFixItem = ReadCheckAndFixItemFromStream(fileStream);
-                checkAndFixItem.FileName = Path.GetFileName(file);
-                if (checkAndFixItem != null) checkAndFixItems.Add(checkAndFixItem);
+                try 
+                {
+                    IRunnable item;
+                    using var fileStream = Service.GetFileStream(fileName);
+                    if (groupRegex.IsMatch(fileName))
+                    {
+                        // *.group.xml files
+                        item = CheckGroup.LoadFromXmlContent(fileStream);
+                    }
+                    else if (checkRegex.IsMatch(fileName))
+                    {
+                        // *.check.xml files
+                        item = CheckAndFixItem.LoadFromXmlContent(fileStream);
+                    }
+                    else
+                    {
+                        // *.xml files
+                        item = CheckAndFixItem.LoadFromXmlContent(fileStream);
+                    }
+                    if (item != null)
+                    {
+                        item.FileName = Path.GetFileName(fileName);
+                        items.Add(item);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new FileLoadException($"Unable to load '{fileName}'.", e.InnerException);
+                }
             }
 
-            return checkAndFixItems;
+            return items;
         }
 
-        /// <summary>
-        /// This loads a <c>CheckAndFixItem</c> from a <c>Stream</c>, guarding against invalid files.
-        /// </summary>
-        /// <param name="stream">The <c>Stream</c> of a file representing a <c>CheckAndFixItem</c>.</param>
-        /// <returns></returns>
-        private CheckAndFixItem ReadCheckAndFixItemFromStream(Stream stream)
-        {
-            CheckAndFixItem checkAndFixItem = null;
-            checkAndFixItem = CheckAndFixItem.LoadFromXmlContent(stream);
-
-            return checkAndFixItem;
-        }
-
-        public void RemoveCheckAndFixItem(string filename)
+        public void RemoveItem(string filename)
         {
             Service.DeleteFile(filename);
         }

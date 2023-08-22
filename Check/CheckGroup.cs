@@ -7,10 +7,10 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+using Paratext.Data.BibleModule;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Xml;
 using System.Xml.Serialization;
 using TvpMain.Util;
@@ -18,27 +18,27 @@ using TvpMain.Util;
 namespace TvpMain.Check
 {
     /// <summary>
-    /// This is a model class that represents a Translation Check and Fix.
+    /// A class that represents an ordered list of checks that can be run as a group.
     /// </summary>
-    public class CheckAndFixItem : IRunnable, ICloneable
+    public class CheckGroup : IRunnable, ICloneable
     {
         /// <summary>
-        /// The item's default constructor. It will ensure that a unique ID is generated.
+        /// The group's default constructor. It will ensure that a unique ID is generated.
         /// </summary>
-        public CheckAndFixItem()
+        public CheckGroup()
         {
             _id = Guid.NewGuid();
         }
 
         /// <summary>
-        /// Alternative constructor for the V1 TVP checks/fixes that allow for a fixed GUID and other paramters
+        /// Alternative constructor that allows for a fixed GUID and other parameters
         /// </summary>
-        /// <param name="guid">The GUI to use instead of the default created one</param>
-        /// <param name="name">The name of the check/fix</param>
-        /// <param name="description">The description </param>
-        /// <param name="version">The version of the C/F</param>
-        /// <param name="scope">The scope for the C/F</param>
-        public CheckAndFixItem(string guid, string name, string description, string version, CheckScope scope)
+        /// <param name="guid">The guid to use instead of the default created one</param>
+        /// <param name="name">The name of the check group</param>
+        /// <param name="description">The description of the check group</param>
+        /// <param name="version">The version of the check group</param>
+        /// <param name="scope">The scope for the check group</param>
+        public CheckGroup(string guid, string name, string description, string version, CheckScope scope)
         {
             Id = guid;
             Name = name;
@@ -58,7 +58,7 @@ namespace TvpMain.Check
         private Version _version;
 
         /// <summary>
-        /// The GUID for this Check and Fix.
+        /// The GUID for this check group.
         /// </summary>
         public string Id
         {
@@ -67,23 +67,26 @@ namespace TvpMain.Check
         }
 
         /// <summary>
-        /// The name of this Check and Fix item.
+        /// The name of this check group.
         /// </summary>
         public string Name { get; set; }
+
         /// <summary>
-        /// The description of this Check and Fix item.
+        /// The description of this check group.
         /// </summary>
         public string Description { get; set; }
+
         /// <summary>
-        /// The version of this Check and Fix item.
+        /// The version of this check group.
         /// </summary>
         public string Version
         {
             get => _version == null ? "0.0.0.0" : _version.ToString();
             set => _version = new Version(value);
         }
+
         /// <summary>
-        /// Enumeration for the scope of the check
+        /// Enumeration for the scope of the check group.
         /// </summary>
         public enum CheckScope : int
         {
@@ -92,117 +95,115 @@ namespace TvpMain.Check
             CHAPTER,
             VERSE
         }
+
         /// <summary>
-        /// The scope of the check
+        /// The scope of the check group.
         /// </summary>
         public CheckScope Scope { get; set; }
+
         /// <summary>
-        /// Used for a default value in the resulting check items if there isn't a specific one already provided
+        /// Used for a default value in the resulting check groups if there isn't a specific one already provided
         /// </summary>
         public string DefaultDescription { get; set; }
+
         /// <summary>
-        /// The Check's regular expression. The check regex will be evaluated before the check script.
-        /// </summary>
-        public string CheckRegex { get; set; }
-        /// <summary>
-        /// The Fix's regular expression. The fix regex will be evaluated before the fix script, if present.
-        /// </summary>
-        public string FixRegex { get; set; }
-        /// <summary>
-        /// The Check's javascript script content.
-        /// </summary>
-        public string CheckScript { get; set; }
-        /// <summary>
-        /// Set of Languages this check/fix applies to. Empty = All
+        /// Set of Languages this check group applies to. Empty = All
         /// Use standard ISO language  codes ( https://www.andiamo.co.uk/resources/iso-language-codes/)
         /// </summary>
         [XmlArrayItem("Language", Type = typeof(string), IsNullable = false)]
         [XmlArray("Languages")]
-        public string[] Languages { get; set; } = new string[0];
+        public string[] Languages { get; set; }
+
         /// <summary>
         /// Set of Tags that define the limitations or project matching for this check/fix.
         /// Examples: RTL, LTR
         /// </summary>
         [XmlArrayItem("Tag", Type = typeof(string), IsNullable = false)]
         [XmlArray("Tags")]
-        public string[] Tags { get; set; } = new string[0];
+        public string[] Tags { get; set; }
+
         /// <summary>
-        /// The name of the file that the check was loaded from, if applicable.
+        /// Ordered list of the checks in this check group
+        /// </summary>
+        public List<CheckAndFixItem> Checks { get; set; } = new List<CheckAndFixItem>();
+
+        /// <summary>
+        /// Adds a check to this group.
+        /// </summary>
+        /// <param name="check">The check to add</param>
+        public void AddCheck(CheckAndFixItem check)
+        {
+            Checks.Add(check);
+        }
+
+        /// <summary>
+        /// The name of the file that the group was loaded from, if applicable.
         /// </summary>
         [XmlIgnore]
         public string FileName { get; set; }
 
-        [XmlIgnore]
-        public List<CheckAndFixItem> Checks
-        {
-            get
-            {
-                var checks = new List<CheckAndFixItem>();
-                checks.Add(this);
+        public static string FileExtension { get; } = "group.xml";
 
-                return checks;
-            }
-        }
-
-        public static string FileExtension { get; } = "check.xml";
-        
         //////////////// Serialization and Deserialization functions ///////////////////////
 
         /// <summary>
-        /// Deserialize a <c>CheckAndFixItem</c> XML file into a corresponding object.
+        /// Deserialize a <c>CheckGroup</c> XML file into a corresponding object.
         /// </summary>
-        /// <param name="xmlFilePath">The absolute path of the <c>CheckAndFixItem</c> XML file. (required)</param>
-        /// <returns>Corresponding <c>CheckAndFixItem</c> object.</returns>
-        public static CheckAndFixItem LoadFromXmlFile(string xmlFilePath)
+        /// <param name="xmlFilePath">The absolute path of the <c>CheckGroup</c> XML file. (required)</param>
+        /// <returns>Corresponding <c>CheckGroup</c> object.</returns>
+        public static CheckGroup LoadFromXmlFile(string xmlFilePath)
         {
             // validate input
             _ = xmlFilePath ?? throw new ArgumentNullException(nameof(xmlFilePath));
 
             // deserialize the file into an object
-            var serializer = new XmlSerializer(typeof(CheckAndFixItem));
+            var serializer = new XmlSerializer(typeof(CheckGroup));
             using var xmlReader = new XmlTextReader(xmlFilePath);
-            var obj = (CheckAndFixItem)serializer.Deserialize(xmlReader);
+            var obj = (CheckGroup)serializer.Deserialize(xmlReader);
+
             return obj;
         }
 
         /// <summary>
-        /// Deserialize <c>CheckAndFixItem</c> XML content into a corresponding object.
+        /// Deserialize <c>CheckGroup</c> XML content into a corresponding object.
         /// </summary>
-        /// <param name="xmlContent">A <c>Stream</c> representing a <c>CheckAndFixItem</c>. (required)</param>
-        /// <returns>Corresponding <c>CheckAndFixItem</c> object.</returns>
-        public static CheckAndFixItem LoadFromXmlContent(Stream xmlContent)
+        /// <param name="xmlContent">A <c>Stream</c> representing a <c>CheckGroup</c>. (required)</param>
+        /// <returns>Corresponding <c>CheckGroup</c> object.</returns>
+        public static CheckGroup LoadFromXmlContent(Stream xmlContent)
         {
             // validate input
             _ = xmlContent ?? throw new ArgumentNullException(nameof(xmlContent));
 
             // deserialize the file into an object
-            var serializer = new XmlSerializer(typeof(CheckAndFixItem));
-            var result = (CheckAndFixItem)serializer.Deserialize(xmlContent);
+            var serializer = new XmlSerializer(typeof(CheckGroup));
+            var result = (CheckGroup)serializer.Deserialize(xmlContent);
+
             return result;
         }
 
         /// <summary>
-        /// Deserialize <c>CheckAndFixItem</c> XML content into a corresponding object.
+        /// Deserialize <c>CheckGroup</c> XML content into a corresponding object.
         /// </summary>
-        /// <param name="xmlContent">A string representing a <c>CheckAndFixItem</c>. (required)</param>
-        /// <returns>Corresponding <c>CheckAndFixItem</c> object.</returns>
-        public static CheckAndFixItem LoadFromXmlContent(string xmlContent)
+        /// <param name="xmlContent">A string representing a <c>CheckGroup</c>. (required)</param>
+        /// <returns>Corresponding <c>CheckGroup</c> object.</returns>
+        public static CheckGroup LoadFromXmlContent(string xmlContent)
         {
             // validate input
             _ = xmlContent ?? throw new ArgumentNullException(nameof(xmlContent));
 
             // deserialize the file into an object
-            var serializer = new XmlSerializer(typeof(CheckAndFixItem));
+            var serializer = new XmlSerializer(typeof(CheckGroup));
 
             using TextReader reader = new StringReader(xmlContent);
-            var result = (CheckAndFixItem)serializer.Deserialize(reader);
+            var result = (CheckGroup)serializer.Deserialize(reader);
+
             return result;
         }
 
         /// <summary>
-        /// Serialize the current <c>CheckAndFixItem</c> object into an XML file.
+        /// Serialize the current <c>CheckGroup</c> object into an XML file.
         /// </summary>
-        /// <param name="xmlFilePath">The absolute path of the <c>CheckAndFixItem</c> XML file. (required)</param>
+        /// <param name="xmlFilePath">The absolute path of the <c>CheckGroup</c> XML file. (required)</param>
         public void SaveToXmlFile(string xmlFilePath)
         {
             // validate input
@@ -214,65 +215,58 @@ namespace TvpMain.Check
         }
 
         /// <summary>
-        /// Serialize the current <c>CheckAndFixItem</c> object into an XML <c>Stream</c>.
+        /// Serialize the current <c>CheckGroup</c> object into an XML <c>Stream</c>.
         /// </summary>
-        /// <returns>Corresponding <c>CheckAndFixItem</c> object as an XML <c>Stream</c>.</returns>
+        /// <returns>Corresponding <c>CheckGroup</c> object as an XML <c>Stream</c>.</returns>
         public Stream WriteToXmlStream()
         {
             var xmlSerializer = new XmlSerializer(this.GetType());
-
             var stream = new MemoryStream();
             xmlSerializer.Serialize(stream, this);
+
             return (Stream)stream;
         }
 
         /// <summary>
-        /// Serialize the current <c>CheckAndFixItem</c> object into an XML string.
+        /// Serialize the current <c>CheckGroup</c> object into an XML string.
         /// </summary>
-        /// <returns>Corresponding <c>CheckAndFixItem</c> object as an XML string.</returns>
+        /// <returns>Corresponding <c>CheckGroup</c> object as an XML string.</returns>
         public string WriteToXmlString()
         {
             var xmlSerializer = new XmlSerializer(this.GetType());
-
             using var textWriter = new StringWriter();
             xmlSerializer.Serialize(textWriter, this);
+
             return textWriter.ToString();
         }
 
         /// <summary>
-        /// An override of the equals capability to validate the content of two <c>CheckAndFixItem</c>s are the same.
+        /// An override of the equals capability to validate the content of two <c>CheckGroup</c>s are the same.
         /// </summary>
-        /// <param name="obj">The <c>CheckAndFixItem</c> to compare against. (required)</param>
+        /// <param name="obj">The <c>CheckGroup</c> to compare against. (required)</param>
         /// <returns>True: if both objects are equal, False: otherwise.</returns>
         public override bool Equals(object obj)
         {
-            bool isEqual = false;
-            if (obj is CheckAndFixItem item)
-            {
-                isEqual = Id == item.Id &&
-                Name == item.Name &&
-                Description == item.Description &&
-                Version == item.Version &&
-                Scope == item.Scope &&
-                DefaultDescription == item.DefaultDescription &&
-                CheckRegex == item.CheckRegex &&
-                FixRegex == item.FixRegex &&
-                CheckScript == item.CheckScript &&
-                Tags.SequenceEqual(item.Tags) &&
-                Languages.SequenceEqual(item.Languages);
-            }
-
-            return isEqual;
+            return obj is CheckGroup item &&
+                   Id == item.Id &&
+                   Name == item.Name &&
+                   Description == item.Description &&
+                   Version == item.Version &&
+                   Scope == item.Scope &&
+                   DefaultDescription == item.DefaultDescription &&
+                   Checks == item.Checks &&
+                   Tags == item.Tags &&
+                   Languages == item.Languages;
         }
 
         /// <summary>
-        /// This function will make a deep copy of our <c>CheckAndFixItem</c>.
+        /// This function will make a deep copy of our <c>CheckGroup</c>.
         /// </summary>
-        /// <returns>A copy of the current <c>CheckAndFixItem</c> artifact.</returns>
+        /// <returns>A copy of the current <c>CheckGroup</c> artifact.</returns>
         public object Clone()
         {
             // deep clone the object by utilizing the serializing and deserializing functions.
-            return CheckAndFixItem.LoadFromXmlContent(this.WriteToXmlString());
+            return CheckGroup.LoadFromXmlContent(this.WriteToXmlString());
         }
 
         /// <inheritdoc />
@@ -289,9 +283,7 @@ namespace TvpMain.Check
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (Tags != null ? Tags.GetHashCode() : 0);
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (Languages != null ? Languages.GetHashCode() : 0);
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (DefaultDescription != null ? DefaultDescription.GetHashCode() : 0);
-                hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (CheckRegex != null ? CheckRegex.GetHashCode() : 0);
-                hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (FixRegex != null ? FixRegex.GetHashCode() : 0);
-                hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (CheckScript != null ? CheckScript.GetHashCode() : 0);
+                hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (Checks != null ? Checks.GetHashCode() : 0);
                 return hashCode;
             }
         }

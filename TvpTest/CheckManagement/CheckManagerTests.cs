@@ -38,10 +38,10 @@ namespace TvpTest
         }
 
         /// <summary>
-        /// This test verifies that <c>GetOutdatedCheckAndFixItems</c> correctly matches checks that were locally installed with their remote counterparts, and returns them if there is an updated version available.
+        /// This test verifies that <c>GetOutdatedItems</c> correctly matches checks that were locally installed with their remote counterparts, and returns them if there is an updated version available.
         /// </summary>
         [TestMethod()]
-        public void GetOutdatedCheckAndFixItems_returns_a_dictionary_with_any_checks_that_match()
+        public void GetOutdatedItems_returns_a_dictionary_with_any_checks_that_match()
         {
             // Create two basic checks--one of which is an update of the other.
             string testName = "check";
@@ -57,29 +57,29 @@ namespace TvpTest
             };
 
             // Return the basic checks and the logic to compare them.
-            checkManager.Setup(cm => cm.GetInstalledCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
+            checkManager.Setup(cm => cm.GetInstalledItems()).Returns(() => new List<IRunnable>
             {
                 installedItem
             });
-            checkManager.Setup(cm => cm.GetAvailableCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
+            checkManager.Setup(cm => cm.GetAvailableItems()).Returns(() => new List<IRunnable>
             {
                availableItem
             });
 
             // Verify that the check and its match are returned.
-            checkManager.Setup(cm => cm.IsNewVersion(It.IsAny<CheckAndFixItem>(), It.IsAny<CheckAndFixItem>())).Returns(true);
-            checkManager.Setup(cm => cm.GetOutdatedCheckAndFixItems()).CallBase();
-            var outdatedItems = checkManager.Object.GetOutdatedCheckAndFixItems();
+            checkManager.Setup(cm => cm.IsNewVersion(It.IsAny<IRunnable>(), It.IsAny<IRunnable>())).Returns(true);
+            checkManager.Setup(cm => cm.GetOutdatedItems()).CallBase();
+            var outdatedItems = checkManager.Object.GetOutdatedItems();
 
             Assert.IsTrue(outdatedItems.ContainsKey(installedItem));
             Assert.IsTrue(outdatedItems[installedItem].Equals(availableItem));
         }
 
         /// <summary>
-        /// This test verifies that <c>GetOutdatedCheckAndFixItems</c> does not return <c>CheckAndFixItem</c> that do not have an upstream match.
+        /// This test verifies that <c>GetOutdatedItems</c> does not return items that do not have an upstream match.
         /// </summary>
         [TestMethod()]
-        public void GetOutdatedCheckAndFixItems_returns_a_dictionary_excluding_checks_that_do_not_have_a_match()
+        public void GetOutdatedItems_returns_a_dictionary_excluding_checks_that_do_not_have_a_match()
         {
             // Create one basic check which will not have a match.
             string checkName1 = "check1";
@@ -102,12 +102,12 @@ namespace TvpTest
             };
 
             // Return the basic checks and the logic to compare them.
-            checkManager.Setup(cm => cm.GetInstalledCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
+            checkManager.Setup(cm => cm.GetInstalledItems()).Returns(() => new List<IRunnable>
             {
                 installedCheckA,
                 installedCheckB
             });
-            checkManager.Setup(cm => cm.GetAvailableCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
+            checkManager.Setup(cm => cm.GetAvailableItems()).Returns(() => new List<IRunnable>
             {
                availableCheckB
             });
@@ -115,8 +115,8 @@ namespace TvpTest
             // Verify that the check with no match is not included in the dictionary.
             checkManager.Setup(cm => cm.IsNewVersion(installedCheckA, availableCheckB)).Returns(false);
             checkManager.Setup(cm => cm.IsNewVersion(installedCheckB, availableCheckB)).Returns(true);
-            checkManager.Setup(cm => cm.GetOutdatedCheckAndFixItems()).CallBase();
-            var outdatedItems = checkManager.Object.GetOutdatedCheckAndFixItems();
+            checkManager.Setup(cm => cm.GetOutdatedItems()).CallBase();
+            var outdatedItems = checkManager.Object.GetOutdatedItems();
 
             Assert.IsFalse(outdatedItems.ContainsKey(installedCheckA));
             Assert.IsTrue(outdatedItems.ContainsKey(installedCheckB));
@@ -124,10 +124,10 @@ namespace TvpTest
         }
 
         /// <summary>
-        /// This test verifies that <c>GetOutdatedCheckAndFixItems</c> handles duplicate <c>CheckAndFixItem</c>s and only returns the latest version.
+        /// This test verifies that <c>GetOutdatedItems</c> handles duplicate items and only returns the latest version.
         /// </summary>
         [TestMethod()]
-        public void GetOutdatedCheckAndFixItems_handles_duplicates()
+        public void GetOutdatedItems_handles_duplicates()
         {
             // Create three basic checks--one of which is the latest update of another
             string testName = "check";
@@ -151,26 +151,26 @@ namespace TvpTest
             };
 
             // Return the basic checks and the logic to compare them.
-            checkManager.Setup(cm => cm.GetInstalledCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
+            checkManager.Setup(cm => cm.GetInstalledItems()).Returns(() => new List<IRunnable>
             {
                 installedCheckA
             });
-            checkManager.Setup(cm => cm.GetAvailableCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>
+            checkManager.Setup(cm => cm.GetAvailableItems()).Returns(() => new List<IRunnable>
             {
                availableCheckA_Old,
                availableCheckA_New
             });
 
             // Verify that only the latest version is considered.
-            checkManager.Setup(cm => cm.IsNewVersion(It.IsAny<CheckAndFixItem>(), It.IsAny<CheckAndFixItem>())).Returns(true);
-            var outdatedItems = checkManager.Object.GetOutdatedCheckAndFixItems();
+            checkManager.Setup(cm => cm.IsNewVersion(It.IsAny<IRunnable>(), It.IsAny<IRunnable>())).Returns(true);
+            var outdatedItems = checkManager.Object.GetOutdatedItems();
 
             Assert.IsTrue(outdatedItems.ContainsKey(installedCheckA));
             Assert.IsTrue(outdatedItems[installedCheckA].Equals(availableCheckA_New));
         }
 
         /// <summary>
-        /// The test verifies that <c>IsNewVersionTest</c> correctly identifes when two <c>CheckAndFixItem</c>s are the same check, with one being a newer version.
+        /// The test verifies that <c>IsNewVersionTest</c> correctly identifes when two items are the same, with one being a newer version.
         /// </summary>
         [TestMethod()]
         public void IsNewVersionTest()
@@ -236,20 +236,20 @@ namespace TvpTest
             };
 
             // Expose the methods under test.
-            checkManager.Setup(cm => cm.InstallCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
-            checkManager.Setup(cm => cm.UninstallCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
-            checkManager.Setup(cm => cm.SaveCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
-            checkManager.Setup(cm => cm.DeleteCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
-            checkManager.Setup(cm => cm.GetInstalledCheckAndFixItems()).CallBase();
-            checkManager.Setup(cm => cm.GetSavedCheckAndFixItems()).CallBase();
+            checkManager.Setup(cm => cm.InstallItem(It.IsAny<IRunnable>())).CallBase();
+            checkManager.Setup(cm => cm.UninstallItem(It.IsAny<IRunnable>())).CallBase();
+            checkManager.Setup(cm => cm.SaveItem(It.IsAny<IRunnable>())).CallBase();
+            checkManager.Setup(cm => cm.DeleteItem(It.IsAny<IRunnable>())).CallBase();
+            checkManager.Setup(cm => cm.GetInstalledItems()).CallBase();
+            checkManager.Setup(cm => cm.GetSavedItems()).CallBase();
 
             // Add the checks to the repo using their respective methods.
-            checkManager.Object.InstallCheckAndFixItem(remoteCheck);
-            checkManager.Object.SaveCheckAndFixItem(locallyDevelopedCheck);
+            checkManager.Object.InstallItem(remoteCheck);
+            checkManager.Object.SaveItem(locallyDevelopedCheck);
 
             // Fetch the checks using their respective methods.
-            List<CheckAndFixItem> installedChecks = checkManager.Object.GetInstalledCheckAndFixItems();
-            List<CheckAndFixItem> locallyDevelopedChecks = checkManager.Object.GetSavedCheckAndFixItems();
+            List<IRunnable> installedChecks = checkManager.Object.GetInstalledItems();
+            List<IRunnable> locallyDevelopedChecks = checkManager.Object.GetSavedItems();
 
             // Ensure that the repos are separate and that there is no cross-pollution.
             Assert.IsTrue(installedChecks.Contains(remoteCheck));
@@ -258,16 +258,16 @@ namespace TvpTest
             Assert.IsFalse(locallyDevelopedChecks.Contains(remoteCheck));
 
             // Remove the checks from their respective repos.
-            checkManager.Object.UninstallCheckAndFixItem(remoteCheck);
-            checkManager.Object.DeleteCheckAndFixItem(locallyDevelopedCheck);
+            checkManager.Object.UninstallItem(remoteCheck);
+            checkManager.Object.DeleteItem(locallyDevelopedCheck);
 
             // Fetch the checks using their respective methods.
-            Assert.IsTrue(checkManager.Object.GetInstalledCheckAndFixItems().Count == 0);
-            Assert.IsTrue(checkManager.Object.GetSavedCheckAndFixItems().Count == 0);
+            Assert.IsTrue(checkManager.Object.GetInstalledItems().Count == 0);
+            Assert.IsTrue(checkManager.Object.GetSavedItems().Count == 0);
         }
 
         /// <summary>
-        /// This test verifies that the <c>CheckManager</c> class can synchronize the installed <c>CheckAndFixItem</c>s with a remote repository.
+        /// This test verifies that the <c>CheckManager</c> class can synchronize the installed items with a remote repository.
         /// </summary>
         [TestMethod()]
         public void It_can_synchronize_the_installed_checks_with_a_remote_repository()
@@ -322,7 +322,7 @@ namespace TvpTest
                 Description = "Local Delta"
             };
 
-            checkManager.Setup(cm => cm.GetAvailableCheckAndFixItems()).Returns(() => new List<CheckAndFixItem>()
+            checkManager.Setup(cm => cm.GetAvailableItems()).Returns(() => new List<IRunnable>()
             {
                 remoteCheckAlpha,
                 remoteCheckBeta,
@@ -330,12 +330,12 @@ namespace TvpTest
             });
 
             // Install the checks that exist at the beginning of the test.
-            checkManager.Object.InstallCheckAndFixItem(localCheckAlpha);
-            checkManager.Object.InstallCheckAndFixItem(localCheckGamma);
-            checkManager.Object.InstallCheckAndFixItem(localCheckDelta);
+            checkManager.Object.InstallItem(localCheckAlpha);
+            checkManager.Object.InstallItem(localCheckGamma);
+            checkManager.Object.InstallItem(localCheckDelta);
 
             // Inspect the repository.
-            List<CheckAndFixItem> installedChecks = checkManager.Object.GetInstalledCheckAndFixItems();
+            List<IRunnable> installedChecks = checkManager.Object.GetInstalledItems();
 
             // Ensure that all checks are installed as expected.
             Assert.IsTrue(installedChecks.Count == 3);
@@ -347,7 +347,7 @@ namespace TvpTest
             checkManager.Object.SynchronizeInstalledChecks();
 
             // Re-inspect the repository.
-            installedChecks = checkManager.Object.GetInstalledCheckAndFixItems();
+            installedChecks = checkManager.Object.GetInstalledItems();
 
             // Ensure that checks have been updated and uninstalled as expected.
             Assert.AreEqual(3, installedChecks.Count);
@@ -357,7 +357,7 @@ namespace TvpTest
         }
 
         /// <summary>
-        /// This test verifies that when the <c>CheckManager</c> class saves a locally-developed <c>CheckAndFixItem</c>, it does not leave old versions on the filesystem.
+        /// This test verifies that when the <c>CheckManager</c> class saves a locally-developed item, it does not leave old versions on the filesystem.
         /// </summary>
         [TestMethod()]
         public void Saving_a_check_replaces_the_existing_version()
@@ -385,22 +385,22 @@ namespace TvpTest
                 Description = "A new description"
             };
 
-            checkManager.Setup(cm => cm.SaveCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
-            checkManager.Setup(cm => cm.GetSavedCheckAndFixItems()).CallBase();
-            checkManager.Setup(cm => cm.DeleteCheckAndFixItem(It.IsAny<CheckAndFixItem>())).CallBase();
+            checkManager.Setup(cm => cm.SaveItem(It.IsAny<CheckAndFixItem>())).CallBase();
+            checkManager.Setup(cm => cm.GetSavedItems()).CallBase();
+            checkManager.Setup(cm => cm.DeleteItem(It.IsAny<CheckAndFixItem>())).CallBase();
 
-            checkManager.Object.SaveCheckAndFixItem(firstVersion);
-            List<CheckAndFixItem> savedChecks = checkManager.Object.GetSavedCheckAndFixItems();
+            checkManager.Object.SaveItem(firstVersion);
+            List<IRunnable> savedChecks = checkManager.Object.GetSavedItems();
             Assert.IsTrue(savedChecks.Count == 1);
             Assert.IsTrue(savedChecks.Contains(firstVersion));
 
-            checkManager.Object.SaveCheckAndFixItem(secondVersion);
-            savedChecks = checkManager.Object.GetSavedCheckAndFixItems();
+            checkManager.Object.SaveItem(secondVersion);
+            savedChecks = checkManager.Object.GetSavedItems();
             Assert.IsTrue(savedChecks.Count == 1);
             Assert.IsTrue(savedChecks.Contains(secondVersion));
 
-            checkManager.Object.SaveCheckAndFixItem(thirdVersion);
-            savedChecks = checkManager.Object.GetSavedCheckAndFixItems();
+            checkManager.Object.SaveItem(thirdVersion);
+            savedChecks = checkManager.Object.GetSavedItems();
             Assert.IsTrue(savedChecks.Count == 1);
             Assert.IsTrue(savedChecks.Contains(thirdVersion));
         }

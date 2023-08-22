@@ -31,7 +31,7 @@ namespace TvpTest
         }
 
         /// <summary>
-        /// This test verifies that the <c>LocalRepository</c> class can both add and remove checks from a local repository.
+        /// This test verifies that the <c>LocalRepository</c> class can both add and remove items from a local repository.
         /// </summary>
         [TestMethod()]
         public void It_can_add_and_remove_checks()
@@ -42,7 +42,7 @@ namespace TvpTest
             };
 
             //Throws an exception if Name is null.
-            Assert.ThrowsException<ArgumentNullException>(() => LocalRepository.AddCheckAndFixItem(null, checkAndFixItem));
+            Assert.ThrowsException<ArgumentNullException>(() => LocalRepository.AddItem(null, checkAndFixItem));
 
             CheckAndFixItem checkAndFixItem2 = new CheckAndFixItem
             {
@@ -53,13 +53,13 @@ namespace TvpTest
                 CheckScript = "return null;"
             };
 
-            LocalRepository.AddCheckAndFixItem(filename, checkAndFixItem2);
+            LocalRepository.AddItem(filename, checkAndFixItem2);
 
-            List<CheckAndFixItem> checkAndFixItems = LocalRepository.GetCheckAndFixItems();
+            List<IRunnable> checkAndFixItems = LocalRepository.GetItems();
             Assert.IsTrue(checkAndFixItems.Count == 1);
             Assert.IsTrue(checkAndFixItems[0].Version == "1.2.3.4");
-            LocalRepository.RemoveCheckAndFixItem(filename);
-            Assert.IsTrue(LocalRepository.GetCheckAndFixItems().Count == 0);
+            LocalRepository.RemoveItem(filename);
+            Assert.IsTrue(LocalRepository.GetItems().Count == 0);
         }
 
         [TestCleanup()]

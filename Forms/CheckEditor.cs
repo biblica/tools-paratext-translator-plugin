@@ -216,7 +216,7 @@ namespace TvpMain.Forms
                 return;
             };
 
-            _checkManager.SaveCheckAndFixItem(_checkAndFixItem);
+            _checkManager.SaveItem(_checkAndFixItem);
             IsRemote = false;
             _dirty = false;
 
@@ -279,7 +279,7 @@ namespace TvpMain.Forms
         private void PublishWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             _checkManager.SynchronizeInstalledChecks();
-            var remoteChecks = _checkManager.GetInstalledCheckAndFixItems();
+            var remoteChecks = _checkManager.GetInstalledItems();
             var found = false;
 
             foreach (var checkAndFixItem in remoteChecks.Where(checkAndFixItem =>
@@ -295,7 +295,7 @@ namespace TvpMain.Forms
             }
             else
             {
-                _checkManager.PublishCheckAndFixItem(_checkAndFixItem);
+                _checkManager.PublishItem(_checkAndFixItem);
             }
         }
 
@@ -318,7 +318,7 @@ namespace TvpMain.Forms
             checkFixNameTextBox.Text = _checkAndFixItem.Name ?? string.Empty;
             versionTextBox.Text = _checkAndFixItem.Version ?? string.Empty;
             scopeCombo.SelectedItem = _checkAndFixItem.Scope.ToString();
-            defaultDescTextBox.Text = _checkAndFixItem.DefaultItemDescription ?? string.Empty;
+            defaultDescTextBox.Text = _checkAndFixItem.DefaultDescription ?? string.Empty;
             languagesTextBox.Text = _checkAndFixItem.Languages == null
                 ? string.Empty
                 : string.Join(", ", _checkAndFixItem.Languages);
@@ -351,7 +351,7 @@ namespace TvpMain.Forms
                 _checkAndFixItem.Name = checkFixNameTextBox.Text;
                 _checkAndFixItem.Version = versionTextBox.Text;
                 _checkAndFixItem.Scope = (CheckAndFixItem.CheckScope)scopeCombo.SelectedIndex;
-                _checkAndFixItem.DefaultItemDescription = defaultDescTextBox.Text;
+                _checkAndFixItem.DefaultDescription = defaultDescTextBox.Text;
                 _checkAndFixItem.Languages = languagesTextBox.Text.Trim().Split(',')
                     .Select(x => x.Trim())
                     .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -382,7 +382,7 @@ namespace TvpMain.Forms
         {
             if (!string.IsNullOrEmpty(_checkAndFixItem.Name.Trim()) &&
                 !string.IsNullOrEmpty(_checkAndFixItem.Version.Trim()) &&
-                !string.IsNullOrEmpty(_checkAndFixItem.DefaultItemDescription.Trim()) &&
+                !string.IsNullOrEmpty(_checkAndFixItem.DefaultDescription.Trim()) &&
                 (!string.IsNullOrEmpty(_checkAndFixItem.CheckRegex.Trim()) ||
                  !string.IsNullOrEmpty(_checkAndFixItem.CheckScript.Trim()))) return true;
             

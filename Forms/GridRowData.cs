@@ -8,14 +8,13 @@ using TvpMain.Check;
 namespace TvpMain.Forms
 {
     /// <summary>
-    /// Used for displaying the check/fix items
-    /// This is used so that we can remember if the item is
-    /// selected or not during search/filtering
+    /// Represents the data displayed in a row of the check items grid.
     /// </summary>
-    public class DisplayItem
+    public class GridRowData
     {
         public bool Selected { get; set; }
         public string Location { get; set; }
+        public string Type { get; set; }
         public string Name { get; }
         public string Description { get; }
         public string Version { get; }
@@ -24,13 +23,14 @@ namespace TvpMain.Forms
         public string Id { get; }
         public bool Active { get; }
         public string Tooltip { get; }
-        public CheckAndFixItem Item { get; }
+        public IRunnable Item { get; }
 
-        public DisplayItem(bool selected, string location, string name, string description, string version, 
-            string languages, string tags, string id, bool active, string tooltip, CheckAndFixItem item)
+        public GridRowData(bool selected, string location, string type, string name, string description, string version, 
+            string languages, string tags, string id, bool active, string tooltip, IRunnable item)
         {
             Selected = selected;
             Location = location;
+            Type = type;
             Name = name;
             Description = description;
             Version = version;
