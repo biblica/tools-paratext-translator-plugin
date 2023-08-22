@@ -7,13 +7,18 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+using Amazon.S3.Model;
 using Paratext.Data.BibleModule;
+using Paratext.Data.ProjectProgress;
+using SIL.Extensions;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml;
 using System.Xml.Serialization;
 using TvpMain.Util;
+using static TvpMain.Check.CheckAndFixItem;
 
 namespace TvpMain.Check
 {
@@ -45,6 +50,33 @@ namespace TvpMain.Check
             Description = description;
             Version = version;
             Scope = scope;
+        }
+
+        /// <summary>
+        /// Construct a CheckGroup from an existing one.
+        /// </summary>
+        /// <param name="group">The group to copy.</param>
+        public CheckGroup(CheckGroup group)
+            : this(group.getDTO())
+        {
+        }
+
+        /// <summary>
+        /// Construct a new CheckGroup from a <c>CheckGroupDTO</c> object.
+        /// </summary>
+        /// <param name="dto">The CheckGroupDTO object.</param>
+        public CheckGroup(CheckGroupDTO dto)
+        {
+            Id = dto.Id;
+            Name = dto.Name;
+            Description = dto.Description;
+            DefaultDescription = dto.DefaultDescription;
+            Version = dto.Version;
+            Scope = dto.Scope;
+            foreach (var checkId in dto.CheckIds)
+            {
+                Checks.Add(new KeyValuePair<string, CheckAndFixItem>(checkId, null));
+            }
         }
 
         /// <summary>
@@ -86,17 +118,6 @@ namespace TvpMain.Check
         }
 
         /// <summary>
-        /// Enumeration for the scope of the check group.
-        /// </summary>
-        public enum CheckScope : int
-        {
-            PROJECT,
-            BOOK,
-            CHAPTER,
-            VERSE
-        }
-
-        /// <summary>
         /// The scope of the check group.
         /// </summary>
         public CheckScope Scope { get; set; }
@@ -107,25 +128,106 @@ namespace TvpMain.Check
         public string DefaultDescription { get; set; }
 
         /// <summary>
-        /// Set of Languages this check group applies to. Empty = All
+        /// Set of languages this check group applies to. The languages for a group
+        /// are determined by the checks that it references. A group only supports a 
+        /// language if all of its checks support it.
+        /// empty = all languages, null = incompatible languages
         /// Use standard ISO language  codes ( https://www.andiamo.co.uk/resources/iso-language-codes/)
         /// </summary>
-        [XmlArrayItem("Language", Type = typeof(string), IsNullable = false)]
-        [XmlArray("Languages")]
-        public string[] Languages { get; set; }
+        [XmlIgnore]
+        public string[] Languages
+        {
+            get
+            {
+                List<string> languages = new List<string>();
+                List<string> languagesToRemove = new List<string>();
+                bool languagesAdded = false;
+                foreach (var checkKvp in Checks)
+                {
+                    if (checkKvp.Value is null) continue;
+                    CheckAndFixItem check = checkKvp.Value;
+                    if (languages.Count == 0 && languagesAdded == false && check.Languages.Count() > 0)
+                    {
+                        languages.AddRange(check.Languages);
+                        languagesAdded = true;
+                    }
+                    else if (languages.Count > 0 && check.Languages.Count() > 0)
+                    {
+                        languagesToRemove.Clear();
+                        foreach (string language in languages)
+                        {
+                            if (!check.Languages.Contains(language))
+                            {
+                                languagesToRemove.Add(language);
+                            }
+                        }
+                        foreach (string languageToRemove in languagesToRemove)
+                        {
+                            languages.Remove(languageToRemove);
+                        }
+                    }
+                }
+
+                // There are no common languages between all checks in this group.
+                if (languagesAdded && languages.Count == 0) return null;
+
+                return languages.ToArray();
+            }
+        }
 
         /// <summary>
-        /// Set of Tags that define the limitations or project matching for this check/fix.
+        /// Set of tags that define the restrictions on project matching for this group. The tags
+        /// for a group are determined by the tags of the checks it references.
+        /// empty = no tags, null = incompatible tags
         /// Examples: RTL, LTR
         /// </summary>
-        [XmlArrayItem("Tag", Type = typeof(string), IsNullable = false)]
-        [XmlArray("Tags")]
-        public string[] Tags { get; set; }
+        [XmlIgnore]
+        public string[] Tags
+        {
+            get
+            {
+                List<string> tags = new List<string>();
+                List<string> tagsToRemove = new List<string>();
+                bool tagsAdded = false;
+                foreach (var checkKvp in Checks)
+                {
+                    if (checkKvp.Value is null) continue;
+                    CheckAndFixItem check = checkKvp.Value;
+                    if (tags.Count == 0 && tagsAdded == false && check.Tags.Count() > 0)
+                    {
+                        tags.AddRange(check.Tags);
+                        tagsAdded = true;
+                    }
+                    else if (tags.Count > 0 && check.Tags.Count() > 0)
+                    {
+                        tagsToRemove.Clear();
+                        foreach (string tag in tags)
+                        {
+                            if (!check.Tags.Contains(tag))
+                            {
+                                tagsToRemove.Add(tag);
+                            }
+                        }
+                        foreach (string tagToRemove in tagsToRemove)
+                        {
+                            tags.Remove(tagToRemove);
+                        }
+                    }
+                }
+
+                // The checks in this group contain incompatible tags.
+                if (tagsAdded && tags.Count == 0) return null;
+
+                return tags.ToArray();
+            }
+        }
 
         /// <summary>
-        /// Ordered list of the checks in this check group
+        /// Ordered list of the checks in this check group. Each KeyValuePair contains
+        /// the Id of a check and the corresponding CheckAndFixItem object. The object
+        /// value may be null if the check was deleted. 
         /// </summary>
-        public List<CheckAndFixItem> Checks { get; set; } = new List<CheckAndFixItem>();
+        public List<KeyValuePair<string, CheckAndFixItem>> Checks { get; set; } = new List<KeyValuePair<string, CheckAndFixItem>>();
 
         /// <summary>
         /// Adds a check to this group.
@@ -133,7 +235,16 @@ namespace TvpMain.Check
         /// <param name="check">The check to add</param>
         public void AddCheck(CheckAndFixItem check)
         {
-            Checks.Add(check);
+            Checks.Add(new KeyValuePair<string, CheckAndFixItem>(check.Id, check));
+        }
+
+        /// <summary>
+        /// Adds a KeyValue pair representing a check to this group.
+        /// </summary>
+        /// <param name="check">The check to add</param>
+        public void AddCheck(KeyValuePair<string, CheckAndFixItem> checkKvp)
+        {
+            Checks.Add(new KeyValuePair<string, CheckAndFixItem>(checkKvp.Key, checkKvp.Value));
         }
 
         /// <summary>
@@ -142,7 +253,50 @@ namespace TvpMain.Check
         [XmlIgnore]
         public string FileName { get; set; }
 
+        /// <summary>
+        /// Update this group to match the values of another group.
+        /// </summary>
+        /// <param name="group">The group to copy values from.</param>
+        public void Update(CheckGroup group)
+        {
+            Name = group.Name;
+            Description = group.Description;
+            Version = group.Version;
+            Scope = group.Scope;
+            DefaultDescription = group.DefaultDescription;
+            FileName = group.FileName;
+            var checks = new List<KeyValuePair<string, CheckAndFixItem>>();
+            foreach (var checkKvp in group.Checks)
+            {
+                checks.Add(new KeyValuePair<string, CheckAndFixItem>(checkKvp.Key, checkKvp.Value));
+            }
+            Checks = checks;
+        }
+
+        /// <summary>
+        /// The file extension used when a check group is saved to a file.
+        /// </summary>
         public static string FileExtension { get; } = "group.xml";
+
+        /// <summary>
+        /// Creates a CheckGroupDTO object from this group. 
+        /// </summary>
+        /// <returns></returns>
+        private CheckGroupDTO getDTO()
+        {
+            var dto = new CheckGroupDTO();
+            dto.Id = Id;
+            dto.Name = Name;
+            dto.Description = Description;
+            dto.DefaultDescription = DefaultDescription;
+            dto.Version = Version;
+            dto.Languages = Languages;
+            dto.Tags = Tags;
+            dto.Scope = Scope;
+            var checkIds = from check in Checks select check.Key;
+            dto.CheckIds = checkIds.ToArray();
+            return dto;
+        }
 
         //////////////// Serialization and Deserialization functions ///////////////////////
 
@@ -157,11 +311,11 @@ namespace TvpMain.Check
             _ = xmlFilePath ?? throw new ArgumentNullException(nameof(xmlFilePath));
 
             // deserialize the file into an object
-            var serializer = new XmlSerializer(typeof(CheckGroup));
+            var serializer = new XmlSerializer(typeof(CheckGroupDTO));
             using var xmlReader = new XmlTextReader(xmlFilePath);
-            var obj = (CheckGroup)serializer.Deserialize(xmlReader);
+            var checkGroupDto = (CheckGroupDTO)serializer.Deserialize(xmlReader);
 
-            return obj;
+            return new CheckGroup(checkGroupDto);
         }
 
         /// <summary>
@@ -175,10 +329,10 @@ namespace TvpMain.Check
             _ = xmlContent ?? throw new ArgumentNullException(nameof(xmlContent));
 
             // deserialize the file into an object
-            var serializer = new XmlSerializer(typeof(CheckGroup));
-            var result = (CheckGroup)serializer.Deserialize(xmlContent);
+            var serializer = new XmlSerializer(typeof(CheckGroupDTO));
+            var checkGroupDto = (CheckGroupDTO)serializer.Deserialize(xmlContent);
 
-            return result;
+            return new CheckGroup(checkGroupDto);
         }
 
         /// <summary>
@@ -192,12 +346,11 @@ namespace TvpMain.Check
             _ = xmlContent ?? throw new ArgumentNullException(nameof(xmlContent));
 
             // deserialize the file into an object
-            var serializer = new XmlSerializer(typeof(CheckGroup));
-
+            var serializer = new XmlSerializer(typeof(CheckGroupDTO));
             using TextReader reader = new StringReader(xmlContent);
-            var result = (CheckGroup)serializer.Deserialize(reader);
+            var checkGroupDto = (CheckGroupDTO)serializer.Deserialize(reader);
 
-            return result;
+            return new CheckGroup(checkGroupDto);
         }
 
         /// <summary>
@@ -209,9 +362,10 @@ namespace TvpMain.Check
             // validate input
             _ = xmlFilePath ?? throw new ArgumentNullException(nameof(xmlFilePath));
 
-            var writer = new XmlSerializer(this.GetType());
+            CheckGroupDTO dto = getDTO();
+            var writer = new XmlSerializer(dto.GetType());
             using var file = File.Create(xmlFilePath);
-            writer.Serialize(file, this);
+            writer.Serialize(file, dto);
         }
 
         /// <summary>
@@ -220,9 +374,10 @@ namespace TvpMain.Check
         /// <returns>Corresponding <c>CheckGroup</c> object as an XML <c>Stream</c>.</returns>
         public Stream WriteToXmlStream()
         {
-            var xmlSerializer = new XmlSerializer(this.GetType());
+            CheckGroupDTO dto = getDTO();
+            var xmlSerializer = new XmlSerializer(dto.GetType());
             var stream = new MemoryStream();
-            xmlSerializer.Serialize(stream, this);
+            xmlSerializer.Serialize(stream, dto);
 
             return (Stream)stream;
         }
@@ -233,9 +388,10 @@ namespace TvpMain.Check
         /// <returns>Corresponding <c>CheckGroup</c> object as an XML string.</returns>
         public string WriteToXmlString()
         {
-            var xmlSerializer = new XmlSerializer(this.GetType());
+            CheckGroupDTO dto = getDTO();
+            var xmlSerializer = new XmlSerializer(dto.GetType());
             using var textWriter = new StringWriter();
-            xmlSerializer.Serialize(textWriter, this);
+            xmlSerializer.Serialize(textWriter, dto);
 
             return textWriter.ToString();
         }
@@ -266,7 +422,15 @@ namespace TvpMain.Check
         public object Clone()
         {
             // deep clone the object by utilizing the serializing and deserializing functions.
-            return CheckGroup.LoadFromXmlContent(this.WriteToXmlString());
+            var newCheckGroup = CheckGroup.LoadFromXmlContent(this.WriteToXmlString());
+            var newChecks = new List<KeyValuePair<string, CheckAndFixItem>>();
+            foreach (var checkKvp in this.Checks)
+            {
+                newChecks.Add(new KeyValuePair<string, CheckAndFixItem>(checkKvp.Key, checkKvp.Value));
+            }
+            newCheckGroup.Checks = newChecks;
+
+            return newCheckGroup;
         }
 
         /// <inheritdoc />

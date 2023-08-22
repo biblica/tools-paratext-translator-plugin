@@ -37,15 +37,20 @@ namespace TvpMain.Check
         /// Set of Languages this runnable item applies to. empty = All, null = None
         /// Use standard ISO language  codes ( https://www.andiamo.co.uk/resources/iso-language-codes/)
         /// </summary>
-        public string[] Languages { get; set; }
+        public string[] Languages { get; }
 
         /// <summary>
-        /// Set of Tags that define the limitations or project matching for this runnable item.
+        /// Set of Tags that define the limitations on project matching for this runnable item.
         /// Examples: RTL, LTR
         /// </summary>
-        public string[] Tags { get; set; }
+        public string[] Tags { get; }
 
-        public List<CheckAndFixItem> Checks { get; }
+        /// <summary>
+        /// Ordered list of the checks represented by this runnable item. Each
+        /// KeyValuePair contains the Id of a check and the corresponding CheckAndFixItem 
+        /// object. The object value may be null if the check was deleted. 
+        /// </summary>
+        public List<KeyValuePair<string, CheckAndFixItem>> Checks { get; }
 
         /// <summary>
         /// The name of the file that the runnable item was loaded from, if applicable.

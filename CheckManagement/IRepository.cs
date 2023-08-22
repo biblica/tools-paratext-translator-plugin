@@ -60,10 +60,16 @@ namespace TvpMain.CheckManagement
         public void SetAdmin(string userName);
 
         /// <summary>
-        /// This method gets <c>CheckAndFixItem</c>s from a repository.
+        /// Gets a list of all checks and groups in this repository.
         /// </summary>
-        /// <returns>A list of check and fix items that are available in the repository.</returns>
+        /// <returns>The list of checks and groups</returns>
         public List<IRunnable> GetItems();
+
+        /// <summary>
+        /// Get a list of all checks in this repository.
+        /// </summary>
+        /// <returns>The list of checks</returns>
+        public List<CheckAndFixItem> GetChecks();
 
         /// <summary>
         /// This method adds an item to a repository.

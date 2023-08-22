@@ -191,7 +191,10 @@ namespace TvpMain.Forms
             Runnables = runnables ?? throw new ArgumentNullException(nameof(runnables));
             foreach (IRunnable runnable in runnables)
             {
-                ChecksToRun.AddRange(runnable.Checks);
+                foreach (var checkKvp in runnable.Checks)
+                {
+                    ChecksToRun.Add(checkKvp.Value);
+                }
             }
             CheckRunContext = checkRunContext ?? throw new ArgumentNullException(nameof(checkRunContext));
 

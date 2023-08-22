@@ -31,6 +31,22 @@ namespace TvpMain.Check
         }
 
         /// <summary>
+        /// Construct a new CheckAndFixItem from an existing one. Filename value
+        /// is not set since the check was not loaded from a file.
+        /// </summary>
+        /// <param name="check">The CheckAndFixItem to copy.</param>
+        public CheckAndFixItem(CheckAndFixItem check)
+            : this(check.Id, check.Name, check.Description, check.Version, check.Scope)
+        {
+            DefaultDescription = check.DefaultDescription;
+            CheckRegex = check.CheckRegex;
+            FixRegex = check.FixRegex;
+            CheckScript = check.CheckScript;
+            Languages = (string[])check.Languages.Clone();
+            Tags = (string[])check.Tags.Clone();
+        }
+
+        /// <summary>
         /// Alternative constructor for the V1 TVP checks/fixes that allow for a fixed GUID and other paramters
         /// </summary>
         /// <param name="guid">The GUI to use instead of the default created one</param>
@@ -132,20 +148,43 @@ namespace TvpMain.Check
         [XmlIgnore]
         public string FileName { get; set; }
 
+        /// <summary>
+        /// The check returned as a <c>List<KeyValuePair<string, CheckAndFixItem>></c>.
+        /// </summary>
         [XmlIgnore]
-        public List<CheckAndFixItem> Checks
+        public List<KeyValuePair<string, CheckAndFixItem>> Checks
         {
             get
             {
-                var checks = new List<CheckAndFixItem>();
-                checks.Add(this);
+                var checks = new List<KeyValuePair<string, CheckAndFixItem>>();
+                checks.Add(new KeyValuePair<string, CheckAndFixItem>(Id, this));
 
                 return checks;
             }
         }
 
+        /// <summary>
+        /// Updates this check to match the values of another check.
+        /// Note: The Id property of this check will not be changed.
+        /// </summary>
+        /// <param name="check">The check to copy values from.</param>
+        public void Update(CheckAndFixItem check)
+        {
+            Name = check.Name;
+            Description = check.Description;
+            Version = check.Version;
+            Scope = check.Scope;
+            DefaultDescription = check.DefaultDescription;
+            CheckRegex = check.CheckRegex;
+            FixRegex = check.FixRegex;
+            CheckScript = check.CheckScript;
+            Languages = (string[])check.Languages.Clone();
+            Tags = (string[])check.Tags.Clone();
+            FileName = check.FileName;
+        }
+
         public static string FileExtension { get; } = "check.xml";
-        
+
         //////////////// Serialization and Deserialization functions ///////////////////////
 
         /// <summary>

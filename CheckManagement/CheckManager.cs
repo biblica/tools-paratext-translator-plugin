@@ -30,8 +30,19 @@ namespace TvpMain.CheckManagement
     {
         private readonly OptionsManager _optionsManager;
         private readonly IRepository _installedChecksRepository;
+        private Dictionary<string, IRepository> _repositories = new Dictionary<string, IRepository>();
         private readonly IRepository _localRepository;
         private IRepository _remoteRepository = null;
+        /// <summary>
+        /// The names of all enabled repositories. 
+        /// </summary>
+        public string[] Repositories
+        {
+            get
+            {
+                return _repositories.Where(repo => repo.Value.Enabled).Select(repo => repo.Key).ToArray();
+            }
+        }
         private static readonly string SyncStatusFileName =
             $"{Directory.GetCurrentDirectory()}\\{MainConsts.TVP_FOLDER_NAME}\\{MainConsts.LAST_SYNC_FILE_NAME}";
 
@@ -45,6 +56,7 @@ namespace TvpMain.CheckManagement
                 MainConsts.INSTALLED_CHECK_FOLDER_NAME));
             _localRepository = new LocalRepository(Path.Combine(Directory.GetCurrentDirectory(),
                 MainConsts.LOCAL_CHECK_FOLDER_NAME));
+            _repositories.Add(_localRepository.Name, _localRepository);
             SetupRemoteRepository();
         }
 
@@ -101,7 +113,8 @@ namespace TvpMain.CheckManagement
             if (options.SharedRepositories.Count > 0)
             {
                 _remoteRepository = new S3Repository(options.SharedRepositories[0]);
-                if (!_remoteRepository.Verified && _remoteRepository.Enabled) 
+                _repositories.Add(_remoteRepository.Name, _remoteRepository);
+                if (!_remoteRepository.Verified && _remoteRepository.Enabled)
                 {
                     _remoteRepository.Verify();
                     options.SharedRepositories[0].Verified = _remoteRepository.Verified;
@@ -317,18 +330,27 @@ namespace TvpMain.CheckManagement
         }
 
         /// <summary>
-        /// This method saves a new or modified, locally developed item.
+        /// This method saves a new or modified item to the local repository.
         /// </summary>
         /// <param name="item">The item to save locally.</param>
-        public virtual void SaveItem(IRunnable item)
+        public virtual bool SaveItem(IRunnable item)
         {
             var filename = GetItemFilename(item);
-
-            // Remove previous versions of the item before saving a new one.
-            foreach (var check in GetSavedItems()
-                .Where(check => check.Id == item.Id).ToList())
-                DeleteItem(check);
-            _localRepository.AddItem(filename, item);
+            var localItems = GetLocalItems();
+            try
+            {
+                // Remove previous versions of the item.
+                foreach (var check in localItems.Where(check => check.Id == item.Id).ToList())
+                {
+                    DeleteItem(check);
+                }
+                _localRepository.AddItem(filename, item);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -352,13 +374,29 @@ namespace TvpMain.CheckManagement
         }
 
         /// <summary>
-        /// This method publishes a locally developed item to a remote repository.
+        /// This method publishes a locally developed item to the remote repository.
         /// </summary>
         /// <param name="item">The item to publish to the remote repository.</param>
-        public void PublishItem(IRunnable item)
+        /// <returns>true if the item was published. false if the publish failed.</returns>
+        public bool PublishItem(IRunnable item)
         {
-            var filename = GetItemFilename(item);
-            _remoteRepository.AddItem(filename, item);
+            var filename = GetItemFilename(item, true);
+            try
+            {
+                _remoteRepository.AddItem(filename, item);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            // Remove previous versions of the item before saving a new one.
+            foreach (var installedItem in GetInstalledItems().Where(thisItem => thisItem.Id == item.Id).ToList())
+            {
+                _installedChecksRepository.RemoveItem(GetItemFilename(installedItem));
+            }
+            _installedChecksRepository.AddItem(filename, item);
+
+            return true;
         }
 
         /// <summary>
@@ -383,19 +421,73 @@ namespace TvpMain.CheckManagement
         }
 
         /// <summary>
-        /// This method returns a list of items that have been installed from a remote repository.
+        /// This method returns a list of checks that have been installed from a remote repository.
         /// </summary>
-        /// <returns>A list of saved items.</returns>
+        /// <returns>A list of installed checks.</returns>
+        public virtual List<CheckAndFixItem> GetInstalledChecks()
+        {
+            return _installedChecksRepository.GetChecks();
+        }
+
+        /// <summary>
+        /// Returns a list of checks stored in the specified repository.
+        /// </summary>
+        /// <param name="repositoryName">The name of the repository.</param>
+        /// <returns></returns>
+        public virtual List<CheckAndFixItem> GetChecks(string repositoryName)
+        {
+            if (_repositories.ContainsKey(repositoryName))
+            {
+                return _repositories[repositoryName].GetChecks();
+            }
+            else
+            {
+                return new List<CheckAndFixItem>();
+            }
+        }
+
+        /// <summary>
+        /// Returns a list of runnable items (both checks and groups) stored 
+        /// in the specified repository.
+        /// </summary>
+        /// <param name="repositoryName">The name of the repository.</param>
+        /// <returns></returns>
+        public virtual List<IRunnable> GetItems(string repositoryName)
+        {
+            if (_repositories.ContainsKey(repositoryName))
+            {
+                return _repositories[repositoryName].GetItems();
+            }
+            else
+            {
+                return new List<IRunnable>();
+            }
+        }
+
+        /// <summary>
+        /// This method returns a list of runnable items that have been installed 
+        /// from a remote repository.
+        /// </summary>
+        /// <returns>A list of installed items.</returns>
         public virtual List<IRunnable> GetInstalledItems()
         {
             return _installedChecksRepository.GetItems();
         }
 
         /// <summary>
-        /// This method returns a list of locally developed and saved items.
+        /// This method returns a list of checks in the local repository.
         /// </summary>
-        /// <returns>A list of saved items.</returns>
-        public virtual List<IRunnable> GetSavedItems()
+        /// <returns>A list of local checks.</returns>
+        public virtual List<CheckAndFixItem> GetLocalChecks()
+        {
+            return _localRepository.GetChecks();
+        }
+
+        /// <summary>
+        /// This method returns a list of items in the local repository.
+        /// </summary>
+        /// <returns>A list of local items.</returns>
+        public virtual List<IRunnable> GetLocalItems()
         {
             return _localRepository.GetItems();
         }
@@ -437,14 +529,16 @@ namespace TvpMain.CheckManagement
         }
 
         /// <summary>
-        /// This method creates a filename for the provided item.
+        /// This method returns the filename that the item was loaded from or creates 
+        /// a new filename if the old file name is unknown.
         /// </summary>
-        /// <param name="item">The item for which to produce a filename.</param>
+        /// <param name="item">The item</param>
+        /// <param name="ignoreExistingFilename">Always create a new filename.</param>
         /// <returns>The filename produced for the provided item.</returns>
-        public string GetItemFilename(IRunnable item)
+        public string GetItemFilename(IRunnable item, bool ignoreExistingFilename = false)
         {
             string fileName;
-            if (String.IsNullOrWhiteSpace(item.FileName))
+            if (String.IsNullOrWhiteSpace(item.FileName) || ignoreExistingFilename)
             {
                 string extension = "xml";
                 extension = item is CheckAndFixItem ? CheckAndFixItem.FileExtension : extension;

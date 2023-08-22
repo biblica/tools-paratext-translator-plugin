@@ -62,6 +62,12 @@ namespace TvpMain.CheckManagement
         public List<IRunnable> GetInstalledItems();
 
         /// <summary>
+        /// This method returns a list of checks that have been installed from a remote repository.
+        /// </summary>
+        /// <returns>A list of installed checks.</returns>
+        public List<CheckAndFixItem> GetInstalledChecks();
+
+        /// <summary>
         /// This method synchronizes installed items with the remote repository.
         /// </summary>
         /// <param name="dryRun">(optional) If true, returns the result of the operation without applying it.</param>
@@ -69,10 +75,11 @@ namespace TvpMain.CheckManagement
         public Dictionary<SynchronizationResultType, List<IRunnable>> SynchronizeInstalledChecks(bool dryRun = false);
 
         /// <summary>
-        /// This method publishes a locally developed item to a remote repository.
+        /// This method publishes a runnable item to a remote repository.
         /// </summary>
         /// <param name="item">The item to publish to the remote repository.</param>
-        public void PublishItem(IRunnable item);
+        /// <returns>true if the item was published. false if the publish failed.</returns>
+        public bool PublishItem(IRunnable item);
 
         /// <summary>
         /// This method removes a item from the remote repository and uninstalls it locally.
@@ -81,16 +88,37 @@ namespace TvpMain.CheckManagement
         public void UnpublishAndUninstallItem(IRunnable item);
 
         /// <summary>
-        /// This method returns a list of locally-developed and saved items.
+        /// This method returns a list of checks in the local repository.
         /// </summary>
-        /// <returns>A list of saved items.</returns>
-        public List<IRunnable> GetSavedItems();
+        /// <returns>A list of local checks.</returns>
+        public List<CheckAndFixItem> GetLocalChecks();
 
         /// <summary>
-        /// This method saves a new, or modified, locally-developed item.
+        /// This method returns a list of items stored in the local repository.
+        /// </summary>
+        /// <returns>A list of local items.</returns>
+        public List<IRunnable> GetLocalItems();
+
+        /// <summary>
+        /// This method returns a list of checks stored in the specified repository.
+        /// </summary>
+        /// <param name="repositoryName">The name of the repository.</param>
+        /// <returns>A list of checks.</returns>
+        public List<CheckAndFixItem> GetChecks(string repositoryName);
+
+        /// <summary>
+        /// This method returns a list of items stored in the specified repository.
+        /// </summary>
+        /// <param name="repositoryName">The name of the repository.</param>
+        /// <returns>A list of items.</returns>
+        public List<IRunnable> GetItems(string repositoryName);
+
+        /// <summary>
+        /// This method saves the specified item to the local repository.
         /// </summary>
         /// <param name="item">The item to save locally.</param>
-        public void SaveItem(IRunnable item);
+        /// <returns>true if the save was successful. false otherwise.</returns>
+        public bool SaveItem(IRunnable item);
 
         /// <summary>
         /// This method deletes a locally-developed check or group.
@@ -111,18 +139,24 @@ namespace TvpMain.CheckManagement
         public string GetInstalledChecksDirectory();
 
         /// <summary>
-        /// This method creates a filename for the provided item. 
+        /// This method returns the filename that the item was loaded from or creates 
+        /// a new filename if the old file name is unknown.
         /// </summary>
         /// <param name="item">The item</param>
+        /// <param name="ignoreExistingFilename">Always create a new filename.</param>
         /// <returns>The filename produced for the provided item.</returns>
-        public string GetItemFilename(IRunnable item);
+        public string GetItemFilename(IRunnable item, bool ignoreExistingFilename);
 
         /// <summary>
         /// Indicates if the remote repository settings have been verified.
         /// </summary>
         /// <param name="error">If not verified, a message explaining why the verification failed.</param>
         /// <returns>true if the remote repository is verified.</returns>
-
         public bool RemoteRepositoryIsVerified(out string error);
+
+        /// <summary>
+        /// The names of all enabled repositories. 
+        /// </summary>
+        public string[] Repositories { get; }
     }
 }

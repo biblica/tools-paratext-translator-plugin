@@ -11,6 +11,7 @@ using PtxUtils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -151,12 +152,14 @@ namespace TvpMain.CheckManagement
         public List<IRunnable> GetItems()
         {
             var items = new List<IRunnable>();
+            var groups = new List<CheckGroup>();
             VerifyFolderPath();
 
-            var checkFiles = Directory.GetFiles(FolderPath, "*.xml");
             var checkRegex = new Regex($@"\.{Regex.Escape(CheckAndFixItem.FileExtension)}$");
             var groupRegex = new Regex($@"\.{Regex.Escape(CheckGroup.FileExtension)}$");
-            foreach (var filePath in checkFiles)
+            var xmlFiles = Directory.GetFiles(FolderPath, "*.xml");
+
+            foreach (var filePath in xmlFiles)
             {
                 try
                 {
@@ -165,17 +168,19 @@ namespace TvpMain.CheckManagement
                     {
                         // *.group.xml files
                         item = CheckGroup.LoadFromXmlFile(filePath);
+                        if (item != null) groups.Add((CheckGroup)item);
                     }
-                    if (checkRegex.IsMatch(filePath))
+                    else if (checkRegex.IsMatch(filePath))
                     {
                         // *.check.xml files
                         item = CheckAndFixItem.LoadFromXmlFile(filePath);
-                    } 
+                    }
                     else
                     {
                         // *.xml files
                         item = CheckAndFixItem.LoadFromXmlFile(filePath);
                     }
+
                     if (item != null)
                     {
                         item.FileName = Path.GetFileName(filePath);
@@ -188,7 +193,52 @@ namespace TvpMain.CheckManagement
                 }
             }
 
+            foreach (var group in groups)
+            {
+                var newChecks = new List<KeyValuePair<string, CheckAndFixItem>>();
+                foreach (var checkKvp in group.Checks)
+                {
+                    if (checkKvp.Value is null)
+                    {
+                        var foundItem = items.Find(item => item.Id == checkKvp.Key);
+                        if (foundItem != null && foundItem is CheckAndFixItem check)
+                        {
+                            newChecks.Add(new KeyValuePair<string, CheckAndFixItem>(check.Id, check));
+                        }
+                        else
+                        {
+                            newChecks.Add(checkKvp);
+                        }
+                    }
+                    else
+                    {
+                        newChecks.Add(checkKvp);
+                    }
+                }
+
+                group.Checks = newChecks;
+            }
+
             return items;
+        }
+
+        /// <summary>
+        /// Get a list of all checks in this repository.
+        /// </summary>
+        /// <returns>The list of checks</returns>
+        public List<CheckAndFixItem> GetChecks()
+        {
+            var checks = new List<CheckAndFixItem>();
+            var items = GetItems();
+            foreach (IRunnable item in items)
+            {
+                if (item is CheckAndFixItem check)
+                {
+                    checks.Add(check);
+                }
+            }
+
+            return checks;
         }
 
         /// <summary>
