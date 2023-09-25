@@ -44,7 +44,7 @@ namespace TvpMain.Forms
             {
                 _dirty = value;
                 saveIconToolStripMenuItem.Enabled = _dirty;
-                saveToolStripMenuItem.Enabled = _dirty;
+                saveMenuItem.Enabled = _dirty;
             }
         }
 
@@ -166,7 +166,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void NewToolStripMenuItem_Click(object sender, EventArgs e)
+        private void NewMenuItem_Click(object sender, EventArgs e)
         {
             NewGroup();
         }
@@ -176,7 +176,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void OpenToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OpenMenuItem_Click(object sender, EventArgs e)
         {
             // prevent overwriting changes unless explicit
             if (_dirty)
@@ -213,7 +213,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveMenuItem_Click(object sender, EventArgs e)
         {
             if (!UpdateCheckGroup() || !VerifyCheckGroup()) return;
 
@@ -228,7 +228,7 @@ namespace TvpMain.Forms
             } 
             else
             {
-                if (_checkManager.SaveItem(_checkGroup))
+                if (_checkManager.SaveItem(_checkGroup, MainConsts.LOCAL_REPO_NAME))
                 {
                     _lastCheckGroupSave = (CheckGroup)_checkGroup.Clone();
                     Dirty = false;
@@ -241,7 +241,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ExitMenuItem_Click(object sender, EventArgs e)
         {
             Close();
         }
@@ -325,7 +325,7 @@ namespace TvpMain.Forms
             }
             else
             {
-                checks = _checkManager.GetLocalChecks();
+                checks = _checkManager.GetChecks(MainConsts.LOCAL_REPO_NAME);
             }
 
             availableChecks.Items.Clear();
@@ -334,8 +334,7 @@ namespace TvpMain.Forms
                 ListViewItem listViewItem = new ListViewItem();
                 listViewItem.Text = check.Name;
                 listViewItem.Tag = check;
-                listViewItem.ToolTipText = "Check: " + check.Name + Environment.NewLine;
-                listViewItem.ToolTipText += "Description: " + check.Description;
+                listViewItem.ToolTipText = getCheckToolTipText(check);
                 availableChecks.Items.Add(listViewItem);
             }
             SetListViewColumnWidth(availableChecks);
@@ -359,12 +358,31 @@ namespace TvpMain.Forms
                 {
                     listViewItem.Text = foundCheck.Name;
                     listViewItem.Tag = foundCheck;
-                    listViewItem.ToolTipText = "Check: " + foundCheck.Name + Environment.NewLine;
-                    listViewItem.ToolTipText += "Description: " + foundCheck.Description;
+                    listViewItem.ToolTipText = getCheckToolTipText(foundCheck);
                     groupChecks.Items.Add(listViewItem);
                 }
             }
             SetListViewColumnWidth(groupChecks);
+        }
+
+        private string getLanguageDisplayText(string[] languages)
+        {
+            string displayText;
+            if (languages == null)
+            {
+                displayText = "<INVALID>";
+
+            }
+            else if (languages.Count() == 0)
+            {
+                displayText = "All";
+            }
+            else
+            {
+                displayText = string.Join(", ", languages);
+            }
+
+            return displayText;
         }
 
         /// <summary>
@@ -372,19 +390,26 @@ namespace TvpMain.Forms
         /// </summary>
         private void updateLanguagesLabel()
         {
-            if (_checkGroup.Languages == null)
-            {
-                languagesLabel.Text = "<INVALID>";
+            languagesLabel.Text = getLanguageDisplayText(_checkGroup.Languages);
+        }
 
-            } 
-            else if (_checkGroup.Languages.Count() == 0)
+        private string getTagDisplayText(string[] tags)
+        {
+            string displayText;
+            if (tags == null)
             {
-                languagesLabel.Text = "All";
-            } 
+                displayText = "<INVALID>";
+            }
+            else if (tags.Count() == 0)
+            {
+                displayText = "";
+            }
             else
             {
-                languagesLabel.Text = string.Join(", ", _checkGroup.Languages);
+                displayText = string.Join(", ", tags);
             }
+
+            return displayText;
         }
 
         /// <summary>
@@ -392,18 +417,18 @@ namespace TvpMain.Forms
         /// </summary>
         private void updateTagsLabel()
         {
-            if (_checkGroup.Tags == null)
-            {
-                tagsLabel.Text = "<INVALID>";
-            }
-            else if (_checkGroup.Tags.Count() == 0)
-            {
-                tagsLabel.Text = "";
-            }
-            else
-            {
-                tagsLabel.Text = string.Join(", ", _checkGroup.Tags);
-            }
+            tagsLabel.Text = getTagDisplayText(_checkGroup.Tags);
+        }
+
+        private string getCheckToolTipText(CheckAndFixItem check)
+        {
+            string toolTipText = "Check: " + check.Name + Environment.NewLine;
+            toolTipText += "Description: " + check.Description + Environment.NewLine;
+            toolTipText += "Scope: " + check.Scope + Environment.NewLine;
+            toolTipText += "Languages: " + getLanguageDisplayText(check.Languages) + Environment.NewLine;
+            toolTipText += "Tags: " + getTagDisplayText(check.Tags);
+
+            return toolTipText;
         }
 
         /// <summary>
@@ -643,7 +668,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void contactSupportToolStripMenuItem_Click(object sender, EventArgs e)
+        private void contactSupportMenuItem_Click(object sender, EventArgs e)
         {
             //Call the Process.Start method to open the default browser
             //with a URL:
@@ -655,7 +680,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void LicenseToolStripMenuItem_Click(object sender, EventArgs e)
+        private void LicenseMenuItem_Click(object sender, EventArgs e)
         {
             FormUtil.StartLicenseForm();
         }
@@ -688,11 +713,18 @@ namespace TvpMain.Forms
 
         /// <summary>
         /// Handle "Remove" button clicks.
-        /// Remove the selected check from the group.
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
         private void removeFromGroupButton_Click(object sender, EventArgs e)
+        {
+            RemoveCheckFromGroup();
+        }
+
+        /// <summary>
+        /// Remove the selected check from the group.
+        /// </summary>
+        private void RemoveCheckFromGroup()
         {
             if (groupChecks.SelectedIndices.Count < 1) return;
             int currentIndex = groupChecks.SelectedIndices[0];
@@ -797,6 +829,11 @@ namespace TvpMain.Forms
         private void availableChecks_DoubleClick(object sender, EventArgs e)
         {
             AddCheckToGroup();
+        }
+
+        private void groupChecks_DoubleClick(object sender, EventArgs e)
+        {
+            RemoveCheckFromGroup();
         }
     }
 }

@@ -330,21 +330,27 @@ namespace TvpMain.CheckManagement
         }
 
         /// <summary>
-        /// This method saves a new or modified item to the local repository.
+        /// Saves an item to the specified repository.
         /// </summary>
-        /// <param name="item">The item to save locally.</param>
-        public virtual bool SaveItem(IRunnable item)
+        /// <param name="item">The item to save.</param>
+        /// <param name="repositoryName">Name of the repository to save to.</param>
+        /// <returns>true if successful, false otherwise</returns>
+        public virtual bool SaveItem(IRunnable item, string repositoryName)
         {
-            var filename = GetItemFilename(item);
-            var localItems = GetLocalItems();
+            if (!_repositories.ContainsKey(repositoryName)) return false;
+
+            IRepository repository = _repositories[repositoryName];
+            List<IRunnable> repositoryItems = repository.GetItems();
             try
             {
                 // Remove previous versions of the item.
-                foreach (var check in localItems.Where(check => check.Id == item.Id).ToList())
+                foreach (var repositoryItem in repositoryItems.Where(i => i.Id == item.Id).ToList())
                 {
-                    DeleteItem(check);
+                    string removeFileName = GetItemFilename(repositoryItem);
+                    repository.RemoveItem(removeFileName);
                 }
-                _localRepository.AddItem(filename, item);
+                string saveFilename = GetItemFilename(item);
+                repository.AddItem(saveFilename, item);
                 return true;
             }
             catch (Exception)
@@ -472,24 +478,6 @@ namespace TvpMain.CheckManagement
         public virtual List<IRunnable> GetInstalledItems()
         {
             return _installedChecksRepository.GetItems();
-        }
-
-        /// <summary>
-        /// This method returns a list of checks in the local repository.
-        /// </summary>
-        /// <returns>A list of local checks.</returns>
-        public virtual List<CheckAndFixItem> GetLocalChecks()
-        {
-            return _localRepository.GetChecks();
-        }
-
-        /// <summary>
-        /// This method returns a list of items in the local repository.
-        /// </summary>
-        /// <returns>A list of local items.</returns>
-        public virtual List<IRunnable> GetLocalItems()
-        {
-            return _localRepository.GetItems();
         }
 
         /// <summary>

@@ -112,6 +112,11 @@ namespace TvpMain.Forms
         List<GridRowData> _gridData;
 
         /// <summary>
+        /// Simple progress bar form for when items are being saved.
+        /// </summary>
+        private GenericProgressForm _copyProgressForm;
+
+        /// <summary>
         /// This is a fixed CF for V1 TVP scripture reference checking
         /// </summary>
         readonly CheckAndFixItem _scriptureReferenceCf = new CheckAndFixItem(
@@ -302,7 +307,7 @@ namespace TvpMain.Forms
                     ));
                 }
 
-                _localChecks = _checkManager.GetLocalItems();
+                _localChecks = _checkManager.GetItems(MainConsts.LOCAL_REPO_NAME);
                 foreach (IRunnable item in _localChecks)
                 {
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
@@ -361,7 +366,7 @@ namespace TvpMain.Forms
                 newItem
             );
 
-            List<IRunnable> checkCache = isLocal(oldRowData) ? _localChecks : _installedChecks;
+            List<IRunnable> checkCache = isLocal(oldRowData.Location) ? _localChecks : _installedChecks;
             int cacheIndex = checkCache.IndexOf(oldItem);
             if (cacheIndex > -1)
             {
@@ -450,23 +455,33 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
-        /// Checks to see if a row contains a built-in item.
+        /// Checks to see if a repository name matches the built-in repository name.
         /// </summary>
-        /// <param name="rowData">The row data to check.</param>
-        /// <returns>true if the item is built-in. false otherwise.</returns>
-        private bool isBuiltIn(GridRowData rowData)
+        /// <param name="location">The repository name.</param>
+        /// <returns>true if the location matches the built-in repository name.</returns>
+        private bool isBuiltIn(string location)
         {
-            return rowData.Location == MainConsts.BUILTIN_REPO_NAME;
+            return location == MainConsts.BUILTIN_REPO_NAME;
         }
 
         /// <summary>
-        /// Checks to see if a row contains an item that is stored in the local repository.
+        /// Checks to see if a repository name matches the local repository.
         /// </summary>
-        /// <param name="rowData">The item to check.</param>
-        /// <returns>true if the item is stored in the local repository.</returns>
-        private bool isLocal(GridRowData rowData)
+        /// <param name="location">The repository name.</param>
+        /// <returns>true if the location matches the local repository.</returns>
+        private bool isLocal(string location)
         {
-            return rowData.Location == MainConsts.LOCAL_REPO_NAME;
+            return location == MainConsts.LOCAL_REPO_NAME;
+        }
+
+        /// <summary>
+        /// Checks to see if a repository name matches the remote repository.
+        /// </summary>
+        /// <param name="location">The repository name.</param>
+        /// <returns>true if the location matches the remote repository.</returns>
+        private bool isRemote(string location)
+        {
+            return location == MainConsts.REMOTE_REPO_NAME;
         }
 
         /// <summary>
@@ -484,9 +499,9 @@ namespace TvpMain.Forms
                 {
                     continue;
                 }
-
+                bool rowSelected = rowData.Selected;
                 int rowIndex = checksList.Rows.Add(NewGridRow(rowData));
-                checksList.Rows[rowIndex].Selected = rowData.Selected;
+                checksList.Rows[rowIndex].Selected = rowSelected;
             }
 
             checksList.Enabled = true;
@@ -565,7 +580,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ExitMenuItem_Click(object sender, EventArgs e)
         {
             Close();
         }
@@ -575,7 +590,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void LicenseToolStripMenuItem_Click(object sender, EventArgs e)
+        private void LicenseMenuItem_Click(object sender, EventArgs e)
         {
             FormUtil.StartLicenseForm();
         }
@@ -872,7 +887,7 @@ namespace TvpMain.Forms
             var isValid = true;
             var filterReasons = new List<string>();
 
-            var languageId = _host.GetProjectLanguageId(_activeProjectName, "translation validation").ToUpper();
+            var languageId = _host.GetProjectLanguageId(_activeProjectName, "translation validation");
             var projectRtl = _host.GetProjectRtoL(_activeProjectName);
 
             foreach (var checkKvp in item.Checks)
@@ -921,7 +936,7 @@ namespace TvpMain.Forms
             if (item.Checks.Count < 1)
             {
                 isValid = false;
-                filterReasons.Add("- This group is does not contain any checks.");
+                filterReasons.Add("- This group does not contain any checks.");
             }
 
             var toolTipText = String.Join("\n", filterReasons);
@@ -957,6 +972,10 @@ namespace TvpMain.Forms
             {
                 newHelpText += "Description: " + rowData.Description + Environment.NewLine;
             }
+            if (rowData.Item is CheckAndFixItem check)
+            {
+                newHelpText += "Scope: " + check.Scope + Environment.NewLine;
+            }
             if (rowData.Item is CheckGroup group && group.Checks.Count > 0)
             {
                 newHelpText += "Check List:" + Environment.NewLine;
@@ -964,7 +983,7 @@ namespace TvpMain.Forms
                 {
                     if (checkKvp.Value is null)
                     {
-                        newHelpText += "- <MISSING> " + checkKvp.Key;
+                        newHelpText += "- <MISSING> " + checkKvp.Key + Environment.NewLine;
                     }
                     else
                     {
@@ -1092,7 +1111,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void contactSupportToolStripMenuItem_Click(object sender, EventArgs e)
+        private void contactSupportMenuItem_Click(object sender, EventArgs e)
         {
             //Call the Process.Start method to open the default browser
             //with a URL:
@@ -1258,18 +1277,13 @@ namespace TvpMain.Forms
         /// </summary>
         private void deleteSelectedRows()
         {
-            if (checksList.SelectedRows.Count > 0)
-            {
-                if (confirmDeleteSelectedRows())
-                {
-                    foreach (DataGridViewRow row in checksList.SelectedRows)
-                    {
-                        deleteChecksListItem(row.Index);
-                    }
-                }
-            }
+            if (checksList.SelectedRows.Count < 1) return;
+            if (!confirmDeleteSelectedRows()) return;
 
-            UpdateGridData();
+            foreach (DataGridViewRow row in checksList.SelectedRows)
+            {
+                deleteChecksListItem(row.Index);
+            }
         }
 
         /// <summary>
@@ -1280,15 +1294,21 @@ namespace TvpMain.Forms
         {
             var rowData = (GridRowData) checksList.Rows[rowIndex].Tag;
             IRunnable item = rowData.Item;
-            if (_localChecks.Contains(item))
+            string itemLocation = rowData.Location;
+            if (isLocal(itemLocation))
             {
                 _checkManager.DeleteItem(item);
                 _localChecks.Remove(item);
             }
-            else if (_installedChecks.Contains(item))
+            else if (isRemote(itemLocation))
             {
                 _checkManager.UnpublishAndUninstallItem(item);
                 _installedChecks.Remove(item);
+            }
+            int gridIndex = _gridData.FindIndex(rowData => Object.ReferenceEquals(item, rowData.Item));
+            if (gridIndex != -1)
+            {
+                _gridData.RemoveAt(gridIndex);
             }
             checksList.Rows.RemoveAt(rowIndex);
         }
@@ -1387,6 +1407,7 @@ namespace TvpMain.Forms
         /// - If an item row is right-clicked enable the context menu.
         /// - Disable the edit option if the selected row is not editable.
         /// - Disable the delete option if any of the selected rows are not deleteable
+        /// - Setup the copy to option
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
@@ -1397,6 +1418,8 @@ namespace TvpMain.Forms
             {
                 // When an unselected row is right clicked, select it and unselect all other rows.
                 DataGridViewRow row = dataGridView.Rows[e.RowIndex];
+                var rowData = (GridRowData)(row.Tag);
+
                 if (!row.Selected)
                 {
                     row.DataGridView.ClearSelection();
@@ -1407,15 +1430,51 @@ namespace TvpMain.Forms
                 // If a data row is right clicked enable the context menu.
                 checksList.ContextMenuStrip = checksListContextMenu;
 
+                // Enable/Disable the Edit option on the context menu
                 if (checksList.SelectedRows.Count != 1 ||
                     !RowIsEditable(checksList.SelectedRows[0]))
                 {
                     editContextMenuItem.Enabled = false;
                 }
-                // Disable the delete option on the context menu if any selected rows are not deleteable
+                else
+                {
+                    editContextMenuItem.Enabled = true;
+                }
+
+                // Enable/Disable the Dekete option on the context menu
                 if (!AllSelectedRowsAreDeletable())
                 {
                     deleteContextMenuItem.Enabled = false;
+                }
+                else
+                {
+                    deleteContextMenuItem.Enabled = true;
+                }
+
+                // Enable/Disable the Copy To option on the context menu
+                if (isBuiltIn(rowData.Location) || checksList.SelectedRows.Count != 1)
+                {
+                    copyToContextMenuItem.Enabled = false;
+                }
+                else
+                {
+                    copyToContextMenuItem.DropDownItems.Clear();
+                    foreach (string repository in _checkManager.Repositories)
+                    {
+                        if (repository == (string)row.Cells["CFLocation"].Value) continue;
+                        var menuItem = new ToolStripMenuItem();
+                        menuItem.Text = repository;
+                        menuItem.Click += new EventHandler(this.CopyToLocation_Click);
+                        copyToContextMenuItem.DropDownItems.Add(menuItem);
+                    }
+                    if (copyToContextMenuItem.DropDownItems.Count < 1)
+                    {
+                        copyToContextMenuItem.Enabled = false;
+                    }
+                    else
+                    {
+                        copyToContextMenuItem.Enabled = true;
+                    }
                 }
             }
         }
@@ -1437,15 +1496,15 @@ namespace TvpMain.Forms
         /// <returns>true if the row is editable. false otherwise.</returns>
         private bool RowIsEditable(DataGridViewRow row)
         {
-            var item = (GridRowData)row.Tag;
+            var rowData = (GridRowData)row.Tag;
             // Built-in checks cannot be edited.
-            if (isBuiltIn(item))
+            if (isBuiltIn(rowData.Location))
             {
                 return false;
             }
 
             // Non-admins can only edit local checks.
-            if (!isLocal(item) && !_checkManager.IsCurrentUserRemoteAdmin())
+            if (!isLocal(rowData.Location) && !_checkManager.IsCurrentUserRemoteAdmin())
             {
                 return false;
             }
@@ -1460,8 +1519,8 @@ namespace TvpMain.Forms
         /// <returns>true if the row is deletable. false otherwise.</returns>
         private bool RowIsDeletable(DataGridViewRow row)
         {
-            var item = row.Tag as GridRowData;
-            if (item == null || isBuiltIn(item))
+            var rowData = row.Tag as GridRowData;
+            if (rowData == null || isBuiltIn(rowData.Location))
             {
                 return false;
             }
@@ -1484,17 +1543,6 @@ namespace TvpMain.Forms
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Reenable disabled menu items when the context menu closes.
-        /// </summary>
-        /// <param name="sender">The control that sent this event</param>
-        /// <param name="e">The event information that triggered this call</param>
-        private void checksListContextMenu_Closed(object sender, ToolStripDropDownClosedEventArgs e)
-        {
-            editContextMenuItem.Enabled = true;
-            deleteContextMenuItem.Enabled = true;
         }
 
         /// <summary>
@@ -1609,7 +1657,7 @@ namespace TvpMain.Forms
             var row = checksList.SelectedRows[0];
             var rowData = (GridRowData) row.Tag;
 
-            var itemLocation = isLocal(rowData) ? MainConsts.LOCAL_REPO_NAME : MainConsts.REMOTE_REPO_NAME;
+            var itemLocation = isLocal(rowData.Location) ? MainConsts.LOCAL_REPO_NAME : MainConsts.REMOTE_REPO_NAME;
             if (rowData.Item is CheckAndFixItem check)
             {
                 var form = new CheckEditor(_checkManager, check, itemLocation);
@@ -1633,6 +1681,113 @@ namespace TvpMain.Forms
             else
             {
                 return;
+            }
+        }
+
+        /// <summary>
+        /// Copy the selected item to the specified repository.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void CopyToLocation_Click(object sender, EventArgs e)
+        {
+            if (checksList.SelectedRows.Count != 1) return;
+
+            string toLocation = null;
+            if (sender is ToolStripMenuItem menuItem)
+            {
+                toLocation = menuItem.Text;
+            }
+            if (toLocation is null || isBuiltIn(toLocation)) return;
+
+            var row = checksList.SelectedRows[0];
+            var rowData = (GridRowData)row.Tag;
+            var item = rowData.Item;
+            string fromLocation = rowData.Location;
+
+            if (isBuiltIn(fromLocation)) return;
+
+            if (isRemote(toLocation))
+            {
+                var publishResult = MessageBox.Show(@"Are you sure you would like to copy this item?",
+                    @"Confirm Copy", MessageBoxButtons.YesNo);
+                if (publishResult == DialogResult.Yes)
+                {
+                    CopyToRemote(item);
+                }
+            }
+            else
+            {
+                if (_checkManager.SaveItem(item, MainConsts.LOCAL_REPO_NAME))
+                {
+                    UpdateGridData();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Save the check group to the remote repository.
+        /// </summary>
+        private void CopyToRemote(IRunnable item)
+        {
+            _copyProgressForm = new GenericProgressForm("Saving item...");
+            _copyProgressForm.Show(this);
+
+
+            var copyWorker = new BackgroundWorker();
+            copyWorker.DoWork += CopyWorker_DoWork;
+            copyWorker.RunWorkerCompleted += CopyWorker_RunWorkerCompleted;
+            copyWorker.RunWorkerAsync(item);
+        }
+
+        /// <summary>
+        /// Saves an item asynchronously.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void CopyWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            if (e.Argument is IRunnable itemToSave)
+            {
+                _checkManager.SynchronizeInstalledChecks();
+                var remoteChecks = _checkManager.GetInstalledItems();
+                var found = false;
+
+                foreach (var checkAndFixItem in remoteChecks.Where(checkAndFixItem =>
+                    checkAndFixItem.Id.Equals(itemToSave.Id) && checkAndFixItem.Version.Equals(itemToSave.Version)))
+                {
+                    found = true;
+                }
+
+                if (found)
+                {
+                    MessageBox.Show(@"This version of the group already exists in the repository, you must increment the version before trying to publish.",
+                        @"Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    e.Result = false;
+                }
+                else
+                {
+                    _checkManager.PublishItem(itemToSave);
+                    e.Result = true;
+                }
+            }
+            else
+            {
+                e.Result = false;
+            }
+        }
+
+        /// <summary>
+        /// Callback for when the async worker is complete
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void CopyWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            _copyProgressForm.Close();
+            if ((bool)e.Result)
+            {
+                UpdateGridData();
             }
         }
 

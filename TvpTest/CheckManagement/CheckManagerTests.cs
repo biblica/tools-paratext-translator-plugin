@@ -238,18 +238,18 @@ namespace TvpTest
             // Expose the methods under test.
             checkManager.Setup(cm => cm.InstallItem(It.IsAny<IRunnable>())).CallBase();
             checkManager.Setup(cm => cm.UninstallItem(It.IsAny<IRunnable>())).CallBase();
-            checkManager.Setup(cm => cm.SaveItem(It.IsAny<IRunnable>())).CallBase();
+            checkManager.Setup(cm => cm.SaveItem(It.IsAny<IRunnable>(), It.IsAny<string>())).CallBase();
             checkManager.Setup(cm => cm.DeleteItem(It.IsAny<IRunnable>())).CallBase();
             checkManager.Setup(cm => cm.GetInstalledItems()).CallBase();
-            checkManager.Setup(cm => cm.GetLocalItems()).CallBase();
+            checkManager.Setup(cm => cm.GetItems(It.IsAny<string>())).CallBase();
 
             // Add the checks to the repo using their respective methods.
             checkManager.Object.InstallItem(remoteCheck);
-            checkManager.Object.SaveItem(locallyDevelopedCheck);
+            checkManager.Object.SaveItem(locallyDevelopedCheck, MainConsts.LOCAL_REPO_NAME);
 
             // Fetch the checks using their respective methods.
             List<IRunnable> installedChecks = checkManager.Object.GetInstalledItems();
-            List<IRunnable> locallyDevelopedChecks = checkManager.Object.GetLocalItems();
+            List<IRunnable> locallyDevelopedChecks = checkManager.Object.GetItems(MainConsts.LOCAL_REPO_NAME);
 
             // Ensure that the repos are separate and that there is no cross-pollution.
             Assert.IsTrue(installedChecks.Contains(remoteCheck));
@@ -263,7 +263,7 @@ namespace TvpTest
 
             // Fetch the checks using their respective methods.
             Assert.IsTrue(checkManager.Object.GetInstalledItems().Count == 0);
-            Assert.IsTrue(checkManager.Object.GetLocalItems().Count == 0);
+            Assert.IsTrue(checkManager.Object.GetItems(MainConsts.LOCAL_REPO_NAME).Count == 0);
         }
 
         /// <summary>
@@ -385,22 +385,22 @@ namespace TvpTest
                 Description = "A new description"
             };
 
-            checkManager.Setup(cm => cm.SaveItem(It.IsAny<CheckAndFixItem>())).CallBase();
-            checkManager.Setup(cm => cm.GetLocalItems()).CallBase();
+            checkManager.Setup(cm => cm.SaveItem(It.IsAny<CheckAndFixItem>(), It.IsAny<string>())).CallBase();
+            checkManager.Setup(cm => cm.GetItems(It.IsAny<string>())).CallBase();
             checkManager.Setup(cm => cm.DeleteItem(It.IsAny<CheckAndFixItem>())).CallBase();
 
-            checkManager.Object.SaveItem(firstVersion);
-            List<IRunnable> savedChecks = checkManager.Object.GetLocalItems();
+            checkManager.Object.SaveItem(firstVersion, MainConsts.LOCAL_REPO_NAME);
+            List<IRunnable> savedChecks = checkManager.Object.GetItems(MainConsts.LOCAL_REPO_NAME);
             Assert.IsTrue(savedChecks.Count == 1);
             Assert.IsTrue(savedChecks.Contains(firstVersion));
 
-            checkManager.Object.SaveItem(secondVersion);
-            savedChecks = checkManager.Object.GetLocalItems();
+            checkManager.Object.SaveItem(secondVersion, MainConsts.LOCAL_REPO_NAME);
+            savedChecks = checkManager.Object.GetItems(MainConsts.LOCAL_REPO_NAME);
             Assert.IsTrue(savedChecks.Count == 1);
             Assert.IsTrue(savedChecks.Contains(secondVersion));
 
-            checkManager.Object.SaveItem(thirdVersion);
-            savedChecks = checkManager.Object.GetLocalItems();
+            checkManager.Object.SaveItem(thirdVersion, MainConsts.LOCAL_REPO_NAME);
+            savedChecks = checkManager.Object.GetItems(MainConsts.LOCAL_REPO_NAME);
             Assert.IsTrue(savedChecks.Count == 1);
             Assert.IsTrue(savedChecks.Contains(thirdVersion));
         }

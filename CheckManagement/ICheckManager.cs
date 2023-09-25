@@ -88,18 +88,6 @@ namespace TvpMain.CheckManagement
         public void UnpublishAndUninstallItem(IRunnable item);
 
         /// <summary>
-        /// This method returns a list of checks in the local repository.
-        /// </summary>
-        /// <returns>A list of local checks.</returns>
-        public List<CheckAndFixItem> GetLocalChecks();
-
-        /// <summary>
-        /// This method returns a list of items stored in the local repository.
-        /// </summary>
-        /// <returns>A list of local items.</returns>
-        public List<IRunnable> GetLocalItems();
-
-        /// <summary>
         /// This method returns a list of checks stored in the specified repository.
         /// </summary>
         /// <param name="repositoryName">The name of the repository.</param>
@@ -114,11 +102,12 @@ namespace TvpMain.CheckManagement
         public List<IRunnable> GetItems(string repositoryName);
 
         /// <summary>
-        /// This method saves the specified item to the local repository.
+        /// Saves and item to the specified repository.
         /// </summary>
-        /// <param name="item">The item to save locally.</param>
-        /// <returns>true if the save was successful. false otherwise.</returns>
-        public bool SaveItem(IRunnable item);
+        /// <param name="item">The item to save.</param>
+        /// <param name="repositoryName">Name of the repository to save to.</param>
+        /// <returns>true if successful, false otherwise</returns>
+        public bool SaveItem(IRunnable item, string repositoryName);
 
         /// <summary>
         /// This method deletes a locally-developed check or group.

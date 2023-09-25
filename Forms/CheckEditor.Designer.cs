@@ -67,15 +67,15 @@ namespace TvpMain.Forms
             this.label6 = new System.Windows.Forms.Label();
             this.helpTextBox = new System.Windows.Forms.TextBox();
             this.menuStrip = new System.Windows.Forms.MenuStrip();
-            this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.newToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.saveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.newMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveIconToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.contactSupportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.licenseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.helpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.contactSupportMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.licenseMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.publishWorker = new System.ComponentModel.BackgroundWorker();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -419,63 +419,63 @@ namespace TvpMain.Forms
             // 
             this.menuStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.fileToolStripMenuItem,
+            this.fileMenuItem,
             this.saveIconToolStripMenuItem,
-            this.helpToolStripMenuItem});
+            this.helpMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(986, 38);
             this.menuStrip.TabIndex = 13;
             this.menuStrip.Text = "menuStrip";
             // 
-            // fileToolStripMenuItem
+            // fileMenuItem
             // 
-            this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.newToolStripMenuItem,
-            this.openToolStripMenuItem,
-            this.saveToolStripMenuItem,
-            this.exitToolStripMenuItem});
-            this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F)));
-            this.fileToolStripMenuItem.ShowShortcutKeys = false;
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(46, 34);
-            this.fileToolStripMenuItem.Text = "&File";
+            this.fileMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.newMenuItem,
+            this.openMenuItem,
+            this.saveMenuItem,
+            this.exitMenuItem});
+            this.fileMenuItem.Name = "fileMenuItem";
+            this.fileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F)));
+            this.fileMenuItem.ShowShortcutKeys = false;
+            this.fileMenuItem.Size = new System.Drawing.Size(46, 34);
+            this.fileMenuItem.Text = "&File";
             // 
-            // newToolStripMenuItem
+            // newMenuItem
             // 
-            this.newToolStripMenuItem.Name = "newToolStripMenuItem";
-            this.newToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
-            this.newToolStripMenuItem.ShowShortcutKeys = false;
-            this.newToolStripMenuItem.Size = new System.Drawing.Size(119, 26);
-            this.newToolStripMenuItem.Text = "&New";
-            this.newToolStripMenuItem.Click += new System.EventHandler(this.NewToolStripMenuItem_Click);
+            this.newMenuItem.Name = "newMenuItem";
+            this.newMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
+            this.newMenuItem.ShowShortcutKeys = false;
+            this.newMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.newMenuItem.Text = "&New";
+            this.newMenuItem.Click += new System.EventHandler(this.NewMenuItem_Click);
             // 
-            // openToolStripMenuItem
+            // openMenuItem
             // 
-            this.openToolStripMenuItem.Name = "openToolStripMenuItem";
-            this.openToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.openToolStripMenuItem.ShowShortcutKeys = false;
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(119, 26);
-            this.openToolStripMenuItem.Text = "&Open";
-            this.openToolStripMenuItem.Click += new System.EventHandler(this.OpenToolStripMenuItem_Click);
+            this.openMenuItem.Name = "openMenuItem";
+            this.openMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
+            this.openMenuItem.ShowShortcutKeys = false;
+            this.openMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.openMenuItem.Text = "&Open";
+            this.openMenuItem.Click += new System.EventHandler(this.OpenMenuItem_Click);
             // 
-            // saveToolStripMenuItem
+            // saveMenuItem
             // 
-            this.saveToolStripMenuItem.Name = "saveToolStripMenuItem";
-            this.saveToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.saveToolStripMenuItem.ShowShortcutKeys = false;
-            this.saveToolStripMenuItem.Size = new System.Drawing.Size(119, 26);
-            this.saveToolStripMenuItem.Text = "&Save";
-            this.saveToolStripMenuItem.Click += new System.EventHandler(this.SaveToolStripMenuItem_Click);
+            this.saveMenuItem.Name = "saveMenuItem";
+            this.saveMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
+            this.saveMenuItem.ShowShortcutKeys = false;
+            this.saveMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.saveMenuItem.Text = "&Save";
+            this.saveMenuItem.Click += new System.EventHandler(this.SaveMenuItem_Click);
             // 
-            // exitToolStripMenuItem
+            // exitMenuItem
             // 
-            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.X)));
-            this.exitToolStripMenuItem.ShowShortcutKeys = false;
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(119, 26);
-            this.exitToolStripMenuItem.Text = "E&xit";
-            this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItem_Click);
+            this.exitMenuItem.Name = "exitMenuItem";
+            this.exitMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.X)));
+            this.exitMenuItem.ShowShortcutKeys = false;
+            this.exitMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.exitMenuItem.Text = "E&xit";
+            this.exitMenuItem.Click += new System.EventHandler(this.ExitMenuItem_Click);
             // 
             // saveIconToolStripMenuItem
             // 
@@ -493,30 +493,30 @@ namespace TvpMain.Forms
             this.saveIconToolStripMenuItem.Size = new System.Drawing.Size(24, 29);
             this.saveIconToolStripMenuItem.Text = "saveIconMenuItem";
             this.saveIconToolStripMenuItem.ToolTipText = "Ctrl+S";
-            this.saveIconToolStripMenuItem.Click += new System.EventHandler(this.SaveToolStripMenuItem_Click);
+            this.saveIconToolStripMenuItem.Click += new System.EventHandler(this.SaveMenuItem_Click);
             // 
-            // helpToolStripMenuItem
+            // helpMenuItem
             // 
-            this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.contactSupportToolStripMenuItem,
-            this.licenseToolStripMenuItem});
-            this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            this.helpToolStripMenuItem.Size = new System.Drawing.Size(55, 34);
-            this.helpToolStripMenuItem.Text = "Help";
+            this.helpMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.contactSupportMenuItem,
+            this.licenseMenuItem});
+            this.helpMenuItem.Name = "helpMenuItem";
+            this.helpMenuItem.Size = new System.Drawing.Size(55, 34);
+            this.helpMenuItem.Text = "Help";
             // 
-            // contactSupportToolStripMenuItem
+            // contactSupportMenuItem
             // 
-            this.contactSupportToolStripMenuItem.Name = "contactSupportToolStripMenuItem";
-            this.contactSupportToolStripMenuItem.Size = new System.Drawing.Size(200, 26);
-            this.contactSupportToolStripMenuItem.Text = "Contact Support";
-            this.contactSupportToolStripMenuItem.Click += new System.EventHandler(this.contactSupportToolStripMenuItem_Click);
+            this.contactSupportMenuItem.Name = "contactSupportMenuItem";
+            this.contactSupportMenuItem.Size = new System.Drawing.Size(200, 26);
+            this.contactSupportMenuItem.Text = "Contact Support";
+            this.contactSupportMenuItem.Click += new System.EventHandler(this.contactSupportMenuItem_Click);
             // 
-            // licenseToolStripMenuItem
+            // licenseMenuItem
             // 
-            this.licenseToolStripMenuItem.Name = "licenseToolStripMenuItem";
-            this.licenseToolStripMenuItem.Size = new System.Drawing.Size(200, 26);
-            this.licenseToolStripMenuItem.Text = "License";
-            this.licenseToolStripMenuItem.Click += new System.EventHandler(this.LicenseToolStripMenuItem_Click);
+            this.licenseMenuItem.Name = "licenseMenuItem";
+            this.licenseMenuItem.Size = new System.Drawing.Size(200, 26);
+            this.licenseMenuItem.Text = "License";
+            this.licenseMenuItem.Click += new System.EventHandler(this.LicenseMenuItem_Click);
             // 
             // publishWorker
             // 
@@ -580,18 +580,18 @@ namespace TvpMain.Forms
         private System.Windows.Forms.TextBox descriptionTextBox;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.MenuStrip menuStrip;
-        private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem newToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem saveToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem fileMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem newMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem openMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem saveMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem exitMenuItem;
         private System.Windows.Forms.MaskedTextBox versionTextBox;
         private System.ComponentModel.BackgroundWorker publishWorker;
         private ScintillaNET.Scintilla jsEditor;
         private System.Windows.Forms.ToolStripMenuItem saveIconToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem contactSupportToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem licenseToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem helpMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem contactSupportMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem licenseMenuItem;
         private System.Windows.Forms.Label locationLabel;
         private System.Windows.Forms.Label label11;
     }

@@ -7,6 +7,8 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+using CsvHelper.Configuration.Attributes;
+using CsvHelper.TypeConversion;
 using ScintillaNET;
 using System;
 using System.ComponentModel;
@@ -14,6 +16,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using TvpMain.Check;
 using TvpMain.CheckManagement;
@@ -39,7 +44,7 @@ namespace TvpMain.Forms
             {
                 _dirty = value;
                 saveIconToolStripMenuItem.Enabled = _dirty;
-                saveToolStripMenuItem.Enabled = _dirty;
+                saveMenuItem.Enabled = _dirty;
             }
         }
 
@@ -110,7 +115,7 @@ namespace TvpMain.Forms
         {
             if (_checkAndFixItem == null)
             {
-                NewToolStripMenuItem_Click(sender, e);
+                NewMenuItem_Click(sender, e);
             }
 
             UpdateForm();
@@ -124,7 +129,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void NewToolStripMenuItem_Click(object sender, EventArgs e)
+        private void NewMenuItem_Click(object sender, EventArgs e)
         {
             // prevent overwriting changes unless explicit
             if (_dirty)
@@ -158,7 +163,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void OpenToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OpenMenuItem_Click(object sender, EventArgs e)
         {
             // prevent overwriting changes unless explicit
             if (_dirty)
@@ -192,11 +197,11 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
-        /// Save the file that represents the check/fix
+        /// Save the file that represents the check.
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveMenuItem_Click(object sender, EventArgs e)
         {
             if (!UpdateCheckAndFix() || !VerifyCheckAndFix()) return;
 
@@ -211,7 +216,7 @@ namespace TvpMain.Forms
             }
             else
             {
-                if (_checkManager.SaveItem(_checkAndFixItem))
+                if (_checkManager.SaveItem(_checkAndFixItem, RepositoryName))
                 {
                     _lastCheckSave = new CheckAndFixItem(_checkAndFixItem);
                     Dirty = false;
@@ -234,7 +239,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ExitMenuItem_Click(object sender, EventArgs e)
         {
             Close();
         }
@@ -296,7 +301,7 @@ namespace TvpMain.Forms
         private void PublishWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             _progressForm.Close();
-            if ((bool)e.Result) 
+            if ((bool)e.Result)
             {
                 _lastCheckSave = new CheckAndFixItem(_checkAndFixItem);
                 Dirty = false;
@@ -483,8 +488,10 @@ namespace TvpMain.Forms
         private void LanguagesTextBox_MouseEnter(object sender, EventArgs e)
         {
             helpTextBox.Clear();
-            helpTextBox.AppendText("Enter Languages associated with this check/fix. Separate lanugages by comma." + Environment.NewLine);
-            helpTextBox.AppendText("Use language codes found in projects like eng-US, zh, ja, etc.");
+            helpTextBox.AppendText("Enter two letter ISO language codes separated by a comma." +
+                " Paratext shows three letter language codes (e.g. eng-US, rus, heb) in the project settings" +
+                " but uses two letter language codes internally (e.g. en-US, ru, he)." +
+                " See: https://iso639-3.sil.org/code_tables/639/data");
         }
 
         /// <summary>
@@ -623,7 +630,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void contactSupportToolStripMenuItem_Click(object sender, EventArgs e)
+        private void contactSupportMenuItem_Click(object sender, EventArgs e)
         {
             //Call the Process.Start method to open the default browser
             //with a URL:
@@ -635,7 +642,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void LicenseToolStripMenuItem_Click(object sender, EventArgs e)
+        private void LicenseMenuItem_Click(object sender, EventArgs e)
         {
             FormUtil.StartLicenseForm();
         }
