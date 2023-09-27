@@ -602,7 +602,6 @@ namespace TvpMain.Forms
                 OnCheckUpdated(ALL_PROJECTS_INDEX);
                 Application.DoEvents();
             }
-            OnCheckUpdated(ALL_PROJECTS_INDEX);
             HideProgress();
 
             // populate the checks results table
