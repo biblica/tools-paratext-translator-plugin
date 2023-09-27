@@ -11,8 +11,10 @@ using PtxUtils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TvpMain.Check;
 using TvpMain.Util;
@@ -117,7 +119,7 @@ namespace TvpMain.CheckManagement
             return true;
         }
 
-        public void AddCheckAndFixItem(string filename, CheckAndFixItem item)
+        public void AddItem(string filename, IRunnable item)
         {
             if (string.IsNullOrEmpty(filename)) throw new ArgumentNullException(nameof(filename));
 
@@ -134,12 +136,12 @@ namespace TvpMain.CheckManagement
             }
         }
 
-        public Task AddCheckAndFixItemAsync(string filename, CheckAndFixItem item)
+        public Task AddItemAsync(string filename, IRunnable item)
         {
-            return Task.Run(() => AddCheckAndFixItem(filename, item));
+            return Task.Run(() => AddItem(filename, item));
         }
 
-        public void RemoveCheckAndFixItem(string filename)
+        public void RemoveItem(string filename)
         {
             var filePath = Path.Combine(FolderPath, filename);
             if (!File.Exists(filePath)) return;
@@ -147,27 +149,96 @@ namespace TvpMain.CheckManagement
             File.Delete(filePath);
         }
 
-        public List<CheckAndFixItem> GetCheckAndFixItems()
+        public List<IRunnable> GetItems()
         {
-            var checkAndFixItems = new List<CheckAndFixItem>();
+            var items = new List<IRunnable>();
+            var groups = new List<CheckGroup>();
             VerifyFolderPath();
 
-            var checkFiles = Directory.GetFiles(FolderPath, "*.xml");
-            foreach (var checkFilePath in checkFiles)
+            var checkRegex = new Regex($@"\.{Regex.Escape(CheckAndFixItem.FileExtension)}$");
+            var groupRegex = new Regex($@"\.{Regex.Escape(CheckGroup.FileExtension)}$");
+            var xmlFiles = Directory.GetFiles(FolderPath, "*.xml");
+
+            foreach (var filePath in xmlFiles)
             {
                 try
                 {
-                    var checkAndFixItem = CheckAndFixItem.LoadFromXmlFile(checkFilePath);
-                    checkAndFixItem.FileName = Path.GetFileName(checkFilePath);
-                    checkAndFixItems.Add(checkAndFixItem);
+                    IRunnable item;
+                    if (groupRegex.IsMatch(filePath))
+                    {
+                        // *.group.xml files
+                        item = CheckGroup.LoadFromXmlFile(filePath);
+                        if (item != null) groups.Add((CheckGroup)item);
+                    }
+                    else if (checkRegex.IsMatch(filePath))
+                    {
+                        // *.check.xml files
+                        item = CheckAndFixItem.LoadFromXmlFile(filePath);
+                    }
+                    else
+                    {
+                        // *.xml files
+                        item = CheckAndFixItem.LoadFromXmlFile(filePath);
+                    }
+
+                    if (item != null)
+                    {
+                        item.FileName = Path.GetFileName(filePath);
+                        items.Add(item);
+                    }
                 }
                 catch (Exception e)
                 {
-                    throw new FileLoadException($"Unable to load '{checkFilePath}'.", e.InnerException);
+                    throw new FileLoadException($"Unable to load '{filePath}'.", e.InnerException);
                 }
             }
 
-            return checkAndFixItems;
+            foreach (var group in groups)
+            {
+                var newChecks = new List<KeyValuePair<string, CheckAndFixItem>>();
+                foreach (var checkKvp in group.Checks)
+                {
+                    if (checkKvp.Value is null)
+                    {
+                        var foundItem = items.Find(item => item.Id == checkKvp.Key);
+                        if (foundItem != null && foundItem is CheckAndFixItem check)
+                        {
+                            newChecks.Add(new KeyValuePair<string, CheckAndFixItem>(check.Id, check));
+                        }
+                        else
+                        {
+                            newChecks.Add(checkKvp);
+                        }
+                    }
+                    else
+                    {
+                        newChecks.Add(checkKvp);
+                    }
+                }
+
+                group.Checks = newChecks;
+            }
+
+            return items;
+        }
+
+        /// <summary>
+        /// Get a list of all checks in this repository.
+        /// </summary>
+        /// <returns>The list of checks</returns>
+        public List<CheckAndFixItem> GetChecks()
+        {
+            var checks = new List<CheckAndFixItem>();
+            var items = GetItems();
+            foreach (IRunnable item in items)
+            {
+                if (item is CheckAndFixItem check)
+                {
+                    checks.Add(check);
+                }
+            }
+
+            return checks;
         }
 
         /// <summary>

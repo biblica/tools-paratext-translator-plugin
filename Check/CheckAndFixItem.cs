@@ -8,7 +8,9 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml;
 using System.Xml.Serialization;
 using TvpMain.Util;
@@ -18,7 +20,7 @@ namespace TvpMain.Check
     /// <summary>
     /// This is a model class that represents a Translation Check and Fix.
     /// </summary>
-    public class CheckAndFixItem : ICloneable
+    public class CheckAndFixItem : IRunnable, ICloneable
     {
         /// <summary>
         /// The item's default constructor. It will ensure that a unique ID is generated.
@@ -26,6 +28,22 @@ namespace TvpMain.Check
         public CheckAndFixItem()
         {
             _id = Guid.NewGuid();
+        }
+
+        /// <summary>
+        /// Construct a new CheckAndFixItem from an existing one. Filename value
+        /// is not set since the check was not loaded from a file.
+        /// </summary>
+        /// <param name="check">The CheckAndFixItem to copy.</param>
+        public CheckAndFixItem(CheckAndFixItem check)
+            : this(check.Id, check.Name, check.Description, check.Version, check.Scope)
+        {
+            DefaultDescription = check.DefaultDescription;
+            CheckRegex = check.CheckRegex;
+            FixRegex = check.FixRegex;
+            CheckScript = check.CheckScript;
+            Languages = (string[])check.Languages.Clone();
+            Tags = (string[])check.Tags.Clone();
         }
 
         /// <summary>
@@ -97,7 +115,7 @@ namespace TvpMain.Check
         /// <summary>
         /// Used for a default value in the resulting check items if there isn't a specific one already provided
         /// </summary>
-        public string DefaultItemDescription { get; set; }
+        public string DefaultDescription { get; set; }
         /// <summary>
         /// The Check's regular expression. The check regex will be evaluated before the check script.
         /// </summary>
@@ -116,19 +134,56 @@ namespace TvpMain.Check
         /// </summary>
         [XmlArrayItem("Language", Type = typeof(string), IsNullable = false)]
         [XmlArray("Languages")]
-        public string[] Languages { get; set; }
+        public string[] Languages { get; set; } = new string[0];
         /// <summary>
         /// Set of Tags that define the limitations or project matching for this check/fix.
         /// Examples: RTL, LTR
         /// </summary>
         [XmlArrayItem("Tag", Type = typeof(string), IsNullable = false)]
         [XmlArray("Tags")]
-        public string[] Tags { get; set; }
+        public string[] Tags { get; set; } = new string[0];
         /// <summary>
         /// The name of the file that the check was loaded from, if applicable.
         /// </summary>
         [XmlIgnore]
         public string FileName { get; set; }
+
+        /// <summary>
+        /// The check returned as a <c>List<KeyValuePair<string, CheckAndFixItem>></c>.
+        /// </summary>
+        [XmlIgnore]
+        public List<KeyValuePair<string, CheckAndFixItem>> Checks
+        {
+            get
+            {
+                var checks = new List<KeyValuePair<string, CheckAndFixItem>>();
+                checks.Add(new KeyValuePair<string, CheckAndFixItem>(Id, this));
+
+                return checks;
+            }
+        }
+
+        /// <summary>
+        /// Updates this check to match the values of another check.
+        /// Note: The Id property of this check will not be changed.
+        /// </summary>
+        /// <param name="check">The check to copy values from.</param>
+        public void Update(CheckAndFixItem check)
+        {
+            Name = check.Name;
+            Description = check.Description;
+            Version = check.Version;
+            Scope = check.Scope;
+            DefaultDescription = check.DefaultDescription;
+            CheckRegex = check.CheckRegex;
+            FixRegex = check.FixRegex;
+            CheckScript = check.CheckScript;
+            Languages = (string[])check.Languages.Clone();
+            Tags = (string[])check.Tags.Clone();
+            FileName = check.FileName;
+        }
+
+        public static string FileExtension { get; } = "check.xml";
 
         //////////////// Serialization and Deserialization functions ///////////////////////
 
@@ -230,18 +285,23 @@ namespace TvpMain.Check
         /// <returns>True: if both objects are equal, False: otherwise.</returns>
         public override bool Equals(object obj)
         {
-            return obj is CheckAndFixItem item &&
-                   Id == item.Id &&
-                   Name == item.Name &&
-                   Description == item.Description &&
-                   Version == item.Version &&
-                   Scope == item.Scope &&
-                   DefaultItemDescription == item.DefaultItemDescription &&
-                   CheckRegex == item.CheckRegex &&
-                   FixRegex == item.FixRegex &&
-                   CheckScript == item.CheckScript &&
-                   Tags == item.Tags &&
-                   Languages == item.Languages;
+            bool isEqual = false;
+            if (obj is CheckAndFixItem item)
+            {
+                isEqual = Id == item.Id &&
+                Name == item.Name &&
+                Description == item.Description &&
+                Version == item.Version &&
+                Scope == item.Scope &&
+                DefaultDescription == item.DefaultDescription &&
+                CheckRegex == item.CheckRegex &&
+                FixRegex == item.FixRegex &&
+                CheckScript == item.CheckScript &&
+                Tags.SequenceEqual(item.Tags) &&
+                Languages.SequenceEqual(item.Languages);
+            }
+
+            return isEqual;
         }
 
         /// <summary>
@@ -267,7 +327,7 @@ namespace TvpMain.Check
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ Scope.GetHashCode();
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (Tags != null ? Tags.GetHashCode() : 0);
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (Languages != null ? Languages.GetHashCode() : 0);
-                hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (DefaultItemDescription != null ? DefaultItemDescription.GetHashCode() : 0);
+                hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (DefaultDescription != null ? DefaultDescription.GetHashCode() : 0);
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (CheckRegex != null ? CheckRegex.GetHashCode() : 0);
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (FixRegex != null ? FixRegex.GetHashCode() : 0);
                 hashCode = (hashCode * MainConsts.HASH_PRIME) ^ (CheckScript != null ? CheckScript.GetHashCode() : 0);

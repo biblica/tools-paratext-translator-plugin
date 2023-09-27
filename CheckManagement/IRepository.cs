@@ -60,31 +60,37 @@ namespace TvpMain.CheckManagement
         public void SetAdmin(string userName);
 
         /// <summary>
-        /// This method gets <c>CheckAndFixItem</c>s from a repository.
+        /// Gets a list of all checks and groups in this repository.
         /// </summary>
-        /// <returns>A list of check and fix items that are available in the repository.</returns>
-        public List<CheckAndFixItem> GetCheckAndFixItems();
+        /// <returns>The list of checks and groups</returns>
+        public List<IRunnable> GetItems();
 
         /// <summary>
-        /// This method adds a <c>CheckAndFixItem</c> to a repository.
+        /// Get a list of all checks in this repository.
         /// </summary>
-        /// <param name="filename">The filename to use for the item in the repository.</param>
-        /// <param name="item">The check and fix item to add to the repository.</param>
-        public void AddCheckAndFixItem(string filename, CheckAndFixItem item);
+        /// <returns>The list of checks</returns>
+        public List<CheckAndFixItem> GetChecks();
 
         /// <summary>
-        /// This method asynchronously adds a <c>CheckAndFixItem</c> to a repository.
+        /// This method adds an item to a repository.
         /// </summary>
         /// <param name="filename">The filename to use for the item in the repository.</param>
-        /// <param name="item">The check and fix item to add to the repository.</param>
+        /// <param name="item">The item to add to the repository.</param>
+        public void AddItem(string filename, IRunnable item);
+
+        /// <summary>
+        /// This method asynchronously adds an item to a repository.
+        /// </summary>
+        /// <param name="filename">The filename to use for the item in the repository.</param>
+        /// <param name="item">The item to add to the repository.</param>
         /// <returns>A task representing the result of the operation.</returns>
-        public Task AddCheckAndFixItemAsync(string filename, CheckAndFixItem item);
+        public Task AddItemAsync(string filename, IRunnable item);
 
         /// <summary>
-        /// This method removes a <c>CheckAndFixItem</c> from a repository.
+        /// This method removes an item from a repository.
         /// </summary>
-        /// <param name="filename">The <c>CheckAndFixItem</c> to remove.</param>
-        public void RemoveCheckAndFixItem(string filename);
+        /// <param name="filename">The filename of the item to remove.</param>
+        public void RemoveItem(string filename);
 
         /// <summary>
         /// Deletes all checks from this repository.

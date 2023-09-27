@@ -48,29 +48,32 @@ namespace TvpMain.Forms
             // 
             // pbrStatus
             // 
-            this.pbrStatus.Location = new System.Drawing.Point(15, 33);
+            this.pbrStatus.Location = new System.Drawing.Point(20, 41);
+            this.pbrStatus.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.pbrStatus.MarqueeAnimationSpeed = 10;
             this.pbrStatus.Maximum = 111;
             this.pbrStatus.Name = "pbrStatus";
-            this.pbrStatus.Size = new System.Drawing.Size(367, 23);
+            this.pbrStatus.Size = new System.Drawing.Size(489, 28);
             this.pbrStatus.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
             this.pbrStatus.TabIndex = 0;
             // 
             // lblTitle
             // 
             this.lblTitle.AutoSize = true;
-            this.lblTitle.Location = new System.Drawing.Point(12, 9);
+            this.lblTitle.Location = new System.Drawing.Point(16, 11);
+            this.lblTitle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(95, 13);
+            this.lblTitle.Size = new System.Drawing.Size(113, 16);
             this.lblTitle.TabIndex = 1;
             this.lblTitle.Text = "Running Checks...";
             // 
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(307, 64);
+            this.btnCancel.Location = new System.Drawing.Point(409, 79);
+            this.btnCancel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(75, 23);
+            this.btnCancel.Size = new System.Drawing.Size(100, 28);
             this.btnCancel.TabIndex = 2;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
@@ -79,9 +82,10 @@ namespace TvpMain.Forms
             // lblElapsedTime
             // 
             this.lblElapsedTime.AutoSize = true;
-            this.lblElapsedTime.Location = new System.Drawing.Point(12, 69);
+            this.lblElapsedTime.Location = new System.Drawing.Point(16, 85);
+            this.lblElapsedTime.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.lblElapsedTime.Name = "lblElapsedTime";
-            this.lblElapsedTime.Size = new System.Drawing.Size(34, 13);
+            this.lblElapsedTime.Size = new System.Drawing.Size(38, 16);
             this.lblElapsedTime.TabIndex = 4;
             this.lblElapsedTime.Text = "00:00";
             this.lblElapsedTime.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -89,15 +93,15 @@ namespace TvpMain.Forms
             // tmrUpdate
             // 
             this.tmrUpdate.Enabled = true;
-            this.tmrUpdate.Interval = 200;
+            this.tmrUpdate.Interval = 50;
             this.tmrUpdate.Tick += new System.EventHandler(this.OnTimerUpdate);
             // 
             // ProgressForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(391, 99);
+            this.ClientSize = new System.Drawing.Size(521, 122);
             this.ControlBox = false;
             this.Controls.Add(this.lblElapsedTime);
             this.Controls.Add(this.btnCancel);
@@ -105,6 +109,7 @@ namespace TvpMain.Forms
             this.Controls.Add(this.pbrStatus);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "ProgressForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Load += new System.EventHandler(this.ProgressForm_Load);

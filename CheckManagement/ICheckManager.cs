@@ -26,8 +26,8 @@ namespace TvpMain.CheckManagement
 
     /// <summary>
     /// This interface defines a class that saves, deletes, publishes, and synchronizes checks.
-    /// "Installed/Uninstalled" <c>CheckAndFixItem</c>s are those which have been persisted to the local filesystem from a remote repository.
-    /// "Saved/Deleted" <c>CheckAndFixItem</c>s are those which have been developed locally and only exist locally.
+    /// "Installed/Uninstalled" items are those which have been persisted to the local filesystem from a remote repository.
+    /// "Saved/Deleted" items are those which have been developed locally and only exist locally.
     /// </summary>
     public interface ICheckManager
     {
@@ -56,47 +56,64 @@ namespace TvpMain.CheckManagement
         public bool SyncOnStartup();
 
         /// <summary>
-        /// This method returns a list of <c>CheckAndFixItem</c>s that have been installed from a remote repository.
+        /// This method returns a list of items that have been installed from a remote repository.
         /// </summary>
-        /// <returns>A list of saved <c>CheckAndFixItem</c>s.</returns>
-        public List<CheckAndFixItem> GetInstalledCheckAndFixItems();
+        /// <returns>A list of saved items.</returns>
+        public List<IRunnable> GetInstalledItems();
 
         /// <summary>
-        /// This method synchronizes installed <c>CheckAndFixItem</c>s with the remote repository.
+        /// This method returns a list of checks that have been installed from a remote repository.
+        /// </summary>
+        /// <returns>A list of installed checks.</returns>
+        public List<CheckAndFixItem> GetInstalledChecks();
+
+        /// <summary>
+        /// This method synchronizes installed items with the remote repository.
         /// </summary>
         /// <param name="dryRun">(optional) If true, returns the result of the operation without applying it.</param>
-        /// <returns>A key/value pair mapping of the result, with <c>CheckAndFixItem</c>s grouped by enumerated values.</returns>
-        public Dictionary<SynchronizationResultType, List<CheckAndFixItem>> SynchronizeInstalledChecks(bool dryRun = false);
+        /// <returns>A key/value pair mapping of the result, with items grouped by enumerated values.</returns>
+        public Dictionary<SynchronizationResultType, List<IRunnable>> SynchronizeInstalledChecks(bool dryRun = false);
 
         /// <summary>
-        /// This method publishes a locally-developed <c>CheckAndFixItem</c> to a remote repository.
+        /// This method publishes a runnable item to a remote repository.
         /// </summary>
-        /// <param name="item">The <c>CheckAndFixItem</c> to publish to the remote repository.</param>
-        public void PublishCheckAndFixItem(CheckAndFixItem item);
+        /// <param name="item">The item to publish to the remote repository.</param>
+        /// <returns>true if the item was published. false if the publish failed.</returns>
+        public bool PublishItem(IRunnable item);
 
         /// <summary>
-        /// This method removes a <c>CheckAndFixItem</c> from the remote repository and uninstalls it locally.
+        /// This method removes a item from the remote repository and uninstalls it locally.
         /// </summary>
-        /// <param name="item">The <c>CheckAndFixItem</c> to unpublish and uninstall.</param>
-        public void UnpublishAndUninstallCheckAndFixItem(CheckAndFixItem item);
+        /// <param name="item">The item to unpublish and uninstall.</param>
+        public void UnpublishAndUninstallItem(IRunnable item);
 
         /// <summary>
-        /// This method returns a list of locally-developed and saved <c>CheckAndFixItem</c>s.
+        /// This method returns a list of checks stored in the specified repository.
         /// </summary>
-        /// <returns>A list of saved <c>CheckAndFixItem</c>s.</returns>
-        public List<CheckAndFixItem> GetSavedCheckAndFixItems();
+        /// <param name="repositoryName">The name of the repository.</param>
+        /// <returns>A list of checks.</returns>
+        public List<CheckAndFixItem> GetChecks(string repositoryName);
 
         /// <summary>
-        /// This method saves a new, or modified, locally-developed <c>CheckAndFixItem</c>.
+        /// This method returns a list of items stored in the specified repository.
         /// </summary>
-        /// <param name="item">The <c>CheckAndFixItem</c> to save locally.</param>
-        public void SaveCheckAndFixItem(CheckAndFixItem item);
+        /// <param name="repositoryName">The name of the repository.</param>
+        /// <returns>A list of items.</returns>
+        public List<IRunnable> GetItems(string repositoryName);
 
         /// <summary>
-        /// This method deletes a locally-developed <c>CheckAndFixItem</c>.
+        /// Saves and item to the specified repository.
         /// </summary>
-        /// <param name="item">The <c>CheckAndFixItem</c> to delete locally.</param>
-        public void DeleteCheckAndFixItem(CheckAndFixItem item);
+        /// <param name="item">The item to save.</param>
+        /// <param name="repositoryName">Name of the repository to save to.</param>
+        /// <returns>true if successful, false otherwise</returns>
+        public bool SaveItem(IRunnable item, string repositoryName);
+
+        /// <summary>
+        /// This method deletes a locally-developed check or group.
+        /// </summary>
+        /// <param name="item">The check or group to delete locally.</param>
+        public void DeleteItem(IRunnable item);
 
         /// <summary>
         /// Get the local check folder path as a string for the editor to open files there.
@@ -111,18 +128,24 @@ namespace TvpMain.CheckManagement
         public string GetInstalledChecksDirectory();
 
         /// <summary>
-        /// This method creates a filename for the provided <c>CheckAndFixItem</c>. 
+        /// This method returns the filename that the item was loaded from or creates 
+        /// a new filename if the old file name is unknown.
         /// </summary>
-        /// <param name="item">The <c>CheckAndFixItem</c></param>
-        /// <returns>The filename produced for the provided <c>CheckAndFixItem</c>.</returns>
-        public string GetCheckAndFixItemFilename(CheckAndFixItem item);
+        /// <param name="item">The item</param>
+        /// <param name="ignoreExistingFilename">Always create a new filename.</param>
+        /// <returns>The filename produced for the provided item.</returns>
+        public string GetItemFilename(IRunnable item, bool ignoreExistingFilename);
 
         /// <summary>
         /// Indicates if the remote repository settings have been verified.
         /// </summary>
         /// <param name="error">If not verified, a message explaining why the verification failed.</param>
         /// <returns>true if the remote repository is verified.</returns>
-
         public bool RemoteRepositoryIsVerified(out string error);
+
+        /// <summary>
+        /// The names of all enabled repositories. 
+        /// </summary>
+        public string[] Repositories { get; }
     }
 }

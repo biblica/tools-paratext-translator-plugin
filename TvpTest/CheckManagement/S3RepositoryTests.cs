@@ -27,7 +27,7 @@ namespace TvpTest
         const string filename2 = "sampleasynccheck-1.0.0.xml";
 
         /// <summary>
-        /// This test verifies that the <c>S3Repository</c> class can add <c>CheckAndFixItem</c>s to an S3 bucket.
+        /// This test verifies that the <c>S3Repository</c> class can add items to an S3 bucket.
         /// </summary>
         [TestMethod()]
         public void AddCheckAndFixItem()
@@ -40,15 +40,15 @@ namespace TvpTest
                 CheckRegex = "*.",
                 CheckScript = "return null;"
             };
-            s3Repository.AddCheckAndFixItem(filename1, check);
+            s3Repository.AddItem(filename1, check);
 
-            List<CheckAndFixItem> checkAndFixItems = s3Repository.GetCheckAndFixItems();
+            List<IRunnable> checkAndFixItems = s3Repository.GetItems();
 
             Assert.IsTrue(checkAndFixItems.Contains(check));
         }
 
         /// <summary>
-        /// This test verifies that the <c>S3Repository</c> class can asynchronously add <c>CheckAndFixItem</c>s to an S3-based repository.
+        /// This test verifies that the <c>S3Repository</c> class can asynchronously add items to an S3-based repository.
         /// </summary>
         [TestMethod()]
         public void AddCheckAndFixItemAsync()
@@ -61,9 +61,9 @@ namespace TvpTest
                 CheckRegex = "*.",
                 CheckScript = "return null;"
             };
-            s3Repository.AddCheckAndFixItemAsync(filename2, check).Wait();
+            s3Repository.AddItemAsync(filename2, check).Wait();
 
-            List<CheckAndFixItem> checkAndFixItems = s3Repository.GetCheckAndFixItems();
+            List<IRunnable> checkAndFixItems = s3Repository.GetItems();
 
             Assert.IsTrue(checkAndFixItems.Contains(check));
         }
@@ -71,8 +71,8 @@ namespace TvpTest
         [TestCleanup()]
         public void TestCleanup()
         {
-            s3Repository.RemoveCheckAndFixItem(filename1);
-            s3Repository.RemoveCheckAndFixItem(filename2);
+            s3Repository.RemoveItem(filename1);
+            s3Repository.RemoveItem(filename2);
         }
     }
 }

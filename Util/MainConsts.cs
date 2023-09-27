@@ -158,11 +158,6 @@ namespace TvpMain.Util
         public const string LOCAL_CHECK_FOLDER_NAME = @"plugins\TVP\local-checks";
 
         /// <summary>
-        /// The file extension used by checks.
-        /// </summary>
-        public const string CHECK_FILE_EXTENSION = "xml";
-
-        /// <summary>
         /// The max size for displaying book names
         /// </summary>
         public const int MAX_BOOK_NAME_DISPLAY_LENGTH = 20;

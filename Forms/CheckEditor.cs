@@ -7,6 +7,8 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+using CsvHelper.Configuration.Attributes;
+using CsvHelper.TypeConversion;
 using ScintillaNET;
 using System;
 using System.ComponentModel;
@@ -14,6 +16,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using TvpMain.Check;
 using TvpMain.CheckManagement;
@@ -28,10 +33,25 @@ namespace TvpMain.Forms
     {
         // Keep track when changes are made in the UI.
         private bool _dirty;
+        private bool Dirty
+        {
+            get
+            {
+                return _dirty;
+            }
+
+            set
+            {
+                _dirty = value;
+                saveIconToolStripMenuItem.Enabled = _dirty;
+                saveMenuItem.Enabled = _dirty;
+            }
+        }
 
         private readonly ICheckManager _checkManager;
 
         private CheckAndFixItem _checkAndFixItem;
+        private CheckAndFixItem _lastCheckSave = null;
 
         /// <summary>
         /// Max number of characters in a line number
@@ -42,66 +62,52 @@ namespace TvpMain.Forms
         /// a set of JavaScript keywords
         /// </summary>
         private const string JS_KEYWORDS = "break case catch class const continue debugger default delete do else export extends finally " + "for function if import in instanceof new return super switch this throw try typeof var void while with yield " + "enum implements interface let package private protected public static yield await abstract boolean byte char " + "double final float goto int long native short synchronized throws transient volatile";
-
-        /// <summary>
-        /// Text to display in the Save button when a local check is displayed
-        /// </summary>
-        private const string SAVE_BUTTON_LOCAL_TEXT = @"Save";
-        
-        /// <summary>
-        /// Text to display in the Save button when a remote check is displayed
-        /// </summary>
-        private const string SAVE_BUTTON_REMOTE_TEXT = @"Save a Copy";
         
         /// <summary>
         /// Simple progress bar form for when the checks are being synchronized
         /// </summary>
         private GenericProgressForm _progressForm;
 
-        /// <summary>
-        /// Backing field. Enables IsRemote to trigger changes when set
-        /// </summary>
-        private bool _isRemote = false;
+        private string RepositoryName { get; set; }
 
         /// <summary>
         /// Whether the editor is editing a remote check
         /// </summary>
         private bool IsRemote
         {
-            get => _isRemote;
-            set
+            get
             {
-                // When a check starts as remote, indicate that a copy can be saved locally
-                saveToolStripMenuItem.Text = value ? SAVE_BUTTON_REMOTE_TEXT : SAVE_BUTTON_LOCAL_TEXT;
-                _isRemote = value;
+                return RepositoryName == MainConsts.REMOTE_REPO_NAME;
             }
         }
 
         /// <summary>
-        /// Default constructor
+        /// 
         /// </summary>
-        public CheckEditor(ICheckManager checkManager)
+        /// <param name="checkManager"></param>
+        public CheckEditor(ICheckManager checkManager, string repositoryName)
         {
             InitializeComponent();
             _checkManager = checkManager;
+            RepositoryName = repositoryName;
         }
+
         /// <summary>
-        /// Constructor for opening with a specific check loaded
+        /// Constructor for opening with a specific check loaded.
         /// </summary>
-        /// <param name="checkAndFixFile">The file to open in the editor.</param>
-        /// <param name="isRemote">Whether the file represents a remote check. (Default = false)</param>
-        public CheckEditor(ICheckManager checkManager, FileInfo checkAndFixFile, bool isRemote = false)
+        /// <param name="checkManager"></param>
+        /// <param name="check">The check to open in the editor.</param>
+        /// <param name="repositoryName">Name of the repository where the check is located.</param>
+        public CheckEditor(ICheckManager checkManager, CheckAndFixItem check, string repositoryName)
         {
             InitializeComponent();
             _checkManager = checkManager;
-            IsRemote = isRemote;
-
-            using var fileStream = checkAndFixFile.OpenRead();
-            _checkAndFixItem = CheckAndFixItem.LoadFromXmlContent(fileStream);
+            _checkAndFixItem = new CheckAndFixItem(check);
+            RepositoryName = repositoryName;
         }
 
         /// <summary>
-        /// On dialog load, set to 'new' state
+        /// On dialog load, set to 'new' state.
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
@@ -109,19 +115,12 @@ namespace TvpMain.Forms
         {
             if (_checkAndFixItem == null)
             {
-                NewToolStripMenuItem_Click(sender, e);
+                NewMenuItem_Click(sender, e);
             }
 
-            UpdateUi();
-            _dirty = false;
+            UpdateForm();
+            Dirty = false;
             
-            publishToolStripMenuItem.Visible = 
-                HostUtil.Instance.IsOnline && 
-                _checkManager.RemoteRepositoryIsEnabled() && 
-                _checkManager.IsCurrentUserRemoteAdmin();
-            saveIconToolStripMenuItem.Enabled = IsRemote || _dirty;
-            saveToolStripMenuItem.Enabled = IsRemote || _dirty;
-
             SetScintillaRecipe();
         }
 
@@ -130,7 +129,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void NewToolStripMenuItem_Click(object sender, EventArgs e)
+        private void NewMenuItem_Click(object sender, EventArgs e)
         {
             // prevent overwriting changes unless explicit
             if (_dirty)
@@ -154,13 +153,9 @@ namespace TvpMain.Forms
                 Scope = CheckAndFixItem.CheckScope.VERSE,
                 Id = Guid.NewGuid().ToString()
             };
-            checkFixIdLabel.Text = _checkAndFixItem.Id;
-            IsRemote = false;
 
-            UpdateUi();
-            _dirty = false;
-            saveIconToolStripMenuItem.Enabled = _dirty;
-            saveToolStripMenuItem.Enabled = _dirty;
+            UpdateForm();
+            Dirty = false;
         }
 
         /// <summary>
@@ -168,7 +163,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void OpenToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OpenMenuItem_Click(object sender, EventArgs e)
         {
             // prevent overwriting changes unless explicit
             if (_dirty)
@@ -196,32 +191,47 @@ namespace TvpMain.Forms
 
             using var fileStream = openFileDialog.OpenFile();
             _checkAndFixItem = CheckAndFixItem.LoadFromXmlContent(fileStream);
-            IsRemote = false;
-
-            UpdateUi();
-            _dirty = false;
-            saveIconToolStripMenuItem.Enabled = _dirty;
-            saveToolStripMenuItem.Enabled = _dirty;
+            RepositoryName = MainConsts.LOCAL_REPO_NAME;
+            UpdateForm();
+            Dirty = false;
         }
 
         /// <summary>
-        /// Save the file that represents the check/fix
+        /// Save the file that represents the check.
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveMenuItem_Click(object sender, EventArgs e)
         {
-            if (!UpdateCheckAndFix() || !VerifyCheckAndFix())
+            if (!UpdateCheckAndFix() || !VerifyCheckAndFix()) return;
+
+            if (IsRemote)
             {
-                return;
-            };
+                var publishResult = MessageBox.Show(@"Are you sure you would like to save this check?",
+    @"Confirm Save", MessageBoxButtons.YesNo);
+                if (publishResult == DialogResult.Yes)
+                {
+                    SaveToRemote();
+                }
+            }
+            else
+            {
+                if (_checkManager.SaveItem(_checkAndFixItem, RepositoryName))
+                {
+                    _lastCheckSave = new CheckAndFixItem(_checkAndFixItem);
+                    Dirty = false;
+                }
+            }
+        }
 
-            _checkManager.SaveCheckAndFixItem(_checkAndFixItem);
-            IsRemote = false;
-            _dirty = false;
-
-            saveIconToolStripMenuItem.Enabled = _dirty;
-            saveToolStripMenuItem.Enabled = _dirty;
+        /// <summary>
+        /// If the changes were made to the check and saved, this method will return
+        /// a copy of the check that contains all the changes.
+        /// </summary>
+        /// <returns>A check object with saved changes or null if changes were not saved.</returns>
+        public CheckAndFixItem GetCheck()
+        {
+            return _lastCheckSave;
         }
 
         /// <summary>
@@ -229,43 +239,17 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ExitMenuItem_Click(object sender, EventArgs e)
         {
             Close();
         }
 
         /// <summary>
-        /// Save and Publish the check/fix
+        /// Save the check to the remote repository.
         /// </summary>
-        /// <param name="sender">The control that sent this event</param>
-        /// <param name="e">The event information that triggered this call</param>
-        private void PublishToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveToRemote()
         {
-            if (!UpdateCheckAndFix() || !VerifyCheckAndFix())
-            {
-                return;
-            };
-            
-            var publishResult = MessageBox.Show(@"Are you sure you wish to publish this check/fix?",
-                @"Publish?", MessageBoxButtons.YesNo);
-            if (publishResult != DialogResult.Yes)
-            {
-                return;
-            }
-
-            // It's expected that a remote check might be published without saving, but not a local check
-            if (_dirty && !IsRemote)
-            {
-                var changesResult = MessageBox.Show(
-                    @"You have unsaved changes. Would you like to save your changes before publishing?",
-                    @"Exit?", MessageBoxButtons.YesNo);
-                if (changesResult == DialogResult.Yes)
-                {
-                    SaveToolStripMenuItem_Click(sender, e);
-                }
-            }
-
-            _progressForm = new GenericProgressForm("Publishing check/fix item...");
+            _progressForm = new GenericProgressForm("Saving check...");
             _progressForm.Show(this);
 
             publishWorker.RunWorkerAsync();
@@ -279,7 +263,7 @@ namespace TvpMain.Forms
         private void PublishWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             _checkManager.SynchronizeInstalledChecks();
-            var remoteChecks = _checkManager.GetInstalledCheckAndFixItems();
+            var remoteChecks = _checkManager.GetInstalledItems();
             var found = false;
 
             foreach (var checkAndFixItem in remoteChecks.Where(checkAndFixItem =>
@@ -290,12 +274,22 @@ namespace TvpMain.Forms
 
             if (found)
             {
-                MessageBox.Show(@"This version of the Check/Fix already exists in the repository, you must increment the version before trying to publish.",
+                MessageBox.Show(@"This version of the check already exists in the repository, you must increment the version before trying to publish.",
                     @"Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                e.Result = false;
             }
             else
             {
-                _checkManager.PublishCheckAndFixItem(_checkAndFixItem);
+                if (_checkManager.PublishItem(_checkAndFixItem))
+                {
+                    e.Result = true;
+                }
+                else
+                {
+                    MessageBox.Show(@"The check could not be saved. There may be a problem with your network connection.",
+                        @"Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    e.Result = false;
+                }
             }
         }
 
@@ -307,18 +301,24 @@ namespace TvpMain.Forms
         private void PublishWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             _progressForm.Close();
+            if ((bool)e.Result)
+            {
+                _lastCheckSave = new CheckAndFixItem(_checkAndFixItem);
+                Dirty = false;
+            }
         }
 
         /// <summary>
-        /// Update the UI when a CFitem is loaded
+        /// Update the form when a check is loaded.
         /// </summary>
-        private void UpdateUi()
+        private void UpdateForm()
         {
-            checkFixIdLabel.Text = _checkAndFixItem.Id ?? string.Empty;
+            locationLabel.Text = RepositoryName;
+            checkIdLabel.Text = _checkAndFixItem.Id ?? string.Empty;
             checkFixNameTextBox.Text = _checkAndFixItem.Name ?? string.Empty;
             versionTextBox.Text = _checkAndFixItem.Version ?? string.Empty;
             scopeCombo.SelectedItem = _checkAndFixItem.Scope.ToString();
-            defaultDescTextBox.Text = _checkAndFixItem.DefaultItemDescription ?? string.Empty;
+            defaultDescTextBox.Text = _checkAndFixItem.DefaultDescription ?? string.Empty;
             languagesTextBox.Text = _checkAndFixItem.Languages == null
                 ? string.Empty
                 : string.Join(", ", _checkAndFixItem.Languages);
@@ -351,7 +351,7 @@ namespace TvpMain.Forms
                 _checkAndFixItem.Name = checkFixNameTextBox.Text;
                 _checkAndFixItem.Version = versionTextBox.Text;
                 _checkAndFixItem.Scope = (CheckAndFixItem.CheckScope)scopeCombo.SelectedIndex;
-                _checkAndFixItem.DefaultItemDescription = defaultDescTextBox.Text;
+                _checkAndFixItem.DefaultDescription = defaultDescTextBox.Text;
                 _checkAndFixItem.Languages = languagesTextBox.Text.Trim().Split(',')
                     .Select(x => x.Trim())
                     .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -382,7 +382,7 @@ namespace TvpMain.Forms
         {
             if (!string.IsNullOrEmpty(_checkAndFixItem.Name.Trim()) &&
                 !string.IsNullOrEmpty(_checkAndFixItem.Version.Trim()) &&
-                !string.IsNullOrEmpty(_checkAndFixItem.DefaultItemDescription.Trim()) &&
+                !string.IsNullOrEmpty(_checkAndFixItem.DefaultDescription.Trim()) &&
                 (!string.IsNullOrEmpty(_checkAndFixItem.CheckRegex.Trim()) ||
                  !string.IsNullOrEmpty(_checkAndFixItem.CheckScript.Trim()))) return true;
             
@@ -399,9 +399,7 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void Content_TextChanged(object sender, EventArgs e)
         {
-            _dirty = true;
-            saveIconToolStripMenuItem.Enabled = _dirty;
-            saveToolStripMenuItem.Enabled = _dirty;
+            Dirty = true;
         }
 
         /// <summary>
@@ -490,8 +488,10 @@ namespace TvpMain.Forms
         private void LanguagesTextBox_MouseEnter(object sender, EventArgs e)
         {
             helpTextBox.Clear();
-            helpTextBox.AppendText("Enter Languages associated with this check/fix. Separate lanugages by comma." + Environment.NewLine);
-            helpTextBox.AppendText("Use language codes found in projects like eng-US, zh, ja, etc.");
+            helpTextBox.AppendText("Enter two letter ISO language codes separated by a comma." +
+                " Paratext shows three letter language codes (e.g. eng-US, rus, heb) in the project settings" +
+                " but uses two letter language codes internally (e.g. en-US, ru, he)." +
+                " See: https://iso639-3.sil.org/code_tables/639/data");
         }
 
         /// <summary>
@@ -555,6 +555,7 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void JsEditor_TextChanged(object sender, EventArgs e)
         {
+            Dirty = true;
             // Did the number of characters in the line number display change?
             // i.e. nnn VS nn, or nnnn VS nn, etc...
             var maxLineNumberCharLength = jsEditor.Lines.Count.ToString().Length;
@@ -629,7 +630,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void contactSupportToolStripMenuItem_Click(object sender, EventArgs e)
+        private void contactSupportMenuItem_Click(object sender, EventArgs e)
         {
             //Call the Process.Start method to open the default browser
             //with a URL:
@@ -641,7 +642,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void LicenseToolStripMenuItem_Click(object sender, EventArgs e)
+        private void LicenseMenuItem_Click(object sender, EventArgs e)
         {
             FormUtil.StartLicenseForm();
         }

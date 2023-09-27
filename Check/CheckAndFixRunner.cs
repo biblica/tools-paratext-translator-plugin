@@ -51,7 +51,15 @@ namespace TvpMain.Check
             }
 
             // First, run the check regex, looking for matches
-            var checkRegex = new Regex(checkAndFixItem.CheckRegex, DEFAULT_REGEX_OPTIONS);
+            Regex checkRegex;
+            try
+            {
+                checkRegex = new Regex(checkAndFixItem.CheckRegex, DEFAULT_REGEX_OPTIONS);
+            }
+            catch (Exception)
+            {
+                throw new CheckAndFixException("Invalid Check regular expression.", checkAndFixItem);
+            }
             var fixRegex = EscapeCodeRegex.Replace(checkAndFixItem.FixRegex ?? string.Empty,
                 foundMatch => Regex.Unescape(foundMatch.Value));
             var checkResultItems = new List<CheckResultItem>();

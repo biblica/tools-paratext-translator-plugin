@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.ServiceModel.Channels;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -98,10 +99,12 @@ namespace TvpMain.Forms
         /// </summary>
         private readonly ResultManager _resultManager;
 
+        private List<IRunnable> Runnables { get; }
+
         /// <summary>
         /// A collection of the <c>CheckAndFixItem</c>s to run against the content.
         /// </summary>
-        private List<CheckAndFixItem> ChecksToRun { get; }
+        private List<CheckAndFixItem> ChecksToRun { get; } = new List<CheckAndFixItem>();
 
         /// <summary>
         /// The checks organized by check scope.
@@ -143,6 +146,11 @@ namespace TvpMain.Forms
         /// </summary>
         private ConcurrentDictionary<int, StringBuilder> ProjectSb { get; set; } = new ConcurrentDictionary<int, StringBuilder>();
 
+        private string _projectContent = "";
+        private ConcurrentDictionary<int, string> _bookContent = new ConcurrentDictionary<int, string>();
+        private ConcurrentDictionary<int, string> _chapterContent = new ConcurrentDictionary<int, string>();
+        private ConcurrentDictionary<int, string> _verseContent = new ConcurrentDictionary<int, string>();
+
         /// <summary>
         /// Check updated event handler.
         /// </summary>
@@ -173,7 +181,7 @@ namespace TvpMain.Forms
             string activeProjectName,
             ProjectManager projectManager,
             BookNameItem[] selectedBooks,
-            List<CheckAndFixItem> checksToRun,
+            List<IRunnable> runnables,
             CheckRunContext checkRunContext)
         {
             // validate inputs
@@ -186,7 +194,14 @@ namespace TvpMain.Forms
             ActiveProjectName = activeProjectName;
             ProjectManager = projectManager ?? throw new ArgumentNullException(nameof(projectManager));
             SelectedBooks = selectedBooks ?? throw new ArgumentNullException(nameof(selectedBooks));
-            ChecksToRun = checksToRun ?? throw new ArgumentNullException(nameof(checksToRun));
+            Runnables = runnables ?? throw new ArgumentNullException(nameof(runnables));
+            foreach (IRunnable runnable in runnables)
+            {
+                foreach (var checkKvp in runnable.Checks)
+                {
+                    ChecksToRun.Add(checkKvp.Value);
+                }
+            }
             CheckRunContext = checkRunContext ?? throw new ArgumentNullException(nameof(checkRunContext));
 
             _progressForm = InitializeProgressForm();
@@ -312,7 +327,7 @@ namespace TvpMain.Forms
                 // we increased the max number of books to account for the project. We pass -1 as the book num to represent the project.
                 _runBookCtr++;
                 CheckUpdated?.Invoke(this,
-                    new CheckUpdatedArgs(CheckRunContext.Books.Count() + 1, _runBookCtr, updateBookNum));
+                    new CheckUpdatedArgs(CheckRunContext.Books.Count() + ChecksToRun.Count + 1, _runBookCtr, updateBookNum));
             }
         }
 
@@ -426,6 +441,168 @@ namespace TvpMain.Forms
             {
                 HideProgress();
             }
+
+            // populate the checks results table
+            PopulateChecksDataGridView();
+        }
+
+        /// <summary>
+        /// Runs a check over the selected content based on the check's scope.
+        /// </summary>
+        /// <param name="check">The check to run.</param>
+        public void RunCheck(CheckAndFixItem check)
+        {
+            // V1 calls do not need the text passed it. The V1 checks get the text a different way.
+            // They are actually verse scope checks, not book scope. But they must be run at the book level.
+            if (check.Id == MainConsts.V1_SCRIPTURE_REFERENCE_CHECK_GUID)
+            {
+                foreach (var bookKvp in _bookContent.OrderBy(kvp => kvp.Key))
+                {
+                    BookUtil.RefToBcv(bookKvp.Key, out int bookNumber, out int chapterNumber, out int verseNumber);
+                    ExecuteV1CheckAndStoreResults("", new ScriptureReferenceCheck(ProjectManager), check, bookNumber, SCOPE_NOT_APPLICABLE, SCOPE_NOT_APPLICABLE);
+                }
+                return;
+            }
+            
+            if (check.Id == MainConsts.V1_PUNCTUATION_CHECK_GUID)
+            {
+                foreach (var bookKvp in _bookContent.OrderBy(kvp => kvp.Key))
+                {
+                    BookUtil.RefToBcv(bookKvp.Key, out int bookNumber, out int chapterNumber, out int verseNumber);
+                    ExecuteV1CheckAndStoreResults("", new MissingSentencePunctuationCheck(ProjectManager), check, bookNumber, SCOPE_NOT_APPLICABLE, SCOPE_NOT_APPLICABLE);
+                }
+                return;
+            }
+
+            switch (check.Scope)
+            {
+                case CheckScope.PROJECT:
+                    ExecuteChecksAndStoreResults(_projectContent, new List<CheckAndFixItem>() { check }, SCOPE_NOT_APPLICABLE, SCOPE_NOT_APPLICABLE, SCOPE_NOT_APPLICABLE);
+                    break;
+                case CheckScope.BOOK:
+                    foreach (var bookKvp in _bookContent.OrderBy(kvp => kvp.Key))
+                    {
+                        BookUtil.RefToBcv(bookKvp.Key, out int bookNumber, out int chapterNumber, out int verseNumber);
+                        ExecuteChecksAndStoreResults(bookKvp.Value, new List<CheckAndFixItem>() { check }, bookNumber, SCOPE_NOT_APPLICABLE, SCOPE_NOT_APPLICABLE);
+                    }
+                    break;
+                case CheckScope.CHAPTER:
+                    foreach (var chapterKvp in _chapterContent.OrderBy(kvp => kvp.Key))
+                    {
+                        BookUtil.RefToBcv(chapterKvp.Key, out int bookNumber, out int chapterNumber, out int verseNumber);
+                        ExecuteChecksAndStoreResults(chapterKvp.Value, new List<CheckAndFixItem>() { check }, bookNumber, chapterNumber, SCOPE_NOT_APPLICABLE);
+                    }
+                    break;
+                case CheckScope.VERSE:
+                    foreach (var verseKvp in _verseContent.OrderBy(kvp => kvp.Key))
+                    {
+                        BookUtil.RefToBcv(verseKvp.Key, out int bookNumber, out int chapterNumber, out int verseNumber);
+                        ExecuteChecksAndStoreResults(verseKvp.Value, new List<CheckAndFixItem>() { check }, bookNumber, chapterNumber, verseNumber);
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Gets and stores the Bible text which checks will be run on. 
+        /// </summary>
+        public void GetBibleContent()
+        {
+            _projectContent = "";
+            _bookContent = new ConcurrentDictionary<int, string>();
+            _chapterContent = new ConcurrentDictionary<int, string>();
+            _verseContent = new ConcurrentDictionary<int, string>();
+            ProjectSb = new ConcurrentDictionary<int, StringBuilder>();
+
+            // set up semaphore and cancellation token to control execution and termination
+            RecycleRunEntities(true);
+
+            // content builders for performing scoped checks.
+            var books = CheckRunContext.Books;
+
+            // set up semaphore for parallelism control, results set, and task list
+            var taskList = new List<Task>();
+            taskList.AddRange(books.Select(book => GetBookContentTask(book.BookNum)));
+
+            var workThread = new Thread(() =>
+            {
+                try
+                {
+                    Task.WaitAll(taskList.ToArray(), _runCancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Ignore (can occur w/cancel).
+                }
+                catch (Exception ex)
+                {
+                    var messageText =
+                        $"Error: Can't load Bible content: \"{CheckRunContext.Project}\" (error: {ex.Message}).";
+
+                    var runEx = new TextCheckException(messageText, ex);
+                    HostUtil.Instance.ReportError(messageText, runEx);
+                }
+            })
+            { IsBackground = true };
+            workThread.Start();
+
+            // busy-wait until helper thread is done,
+            // keeping the UI responsive w/DoEvents()
+            while (workThread.IsAlive)
+            {
+                Application.DoEvents();
+                Thread.Sleep(MainConsts.CHECK_EVENTS_DELAY_IN_MSEC);
+
+                if (_runCancellationTokenSource.IsCancellationRequested)
+                {
+                    return;
+                }
+            }
+
+            // once all the books are checked, let's check the accumulated project content (ordered by book).
+            var sortedKeys = ProjectSb.Keys.ToList();
+            sortedKeys.Sort();
+
+            var finalSb = new StringBuilder();
+            foreach (var key in sortedKeys)
+            {
+                finalSb.Append(ProjectSb[key]);
+            }
+            _projectContent = finalSb.ToString();
+            OnCheckUpdated(ALL_PROJECTS_INDEX);
+        }
+
+        /// <summary>
+        /// Runs the selected checks in the order they appear in the ChecksToRun list.
+        /// </summary>
+        private void RunChecksInOrder()
+        {
+            CheckRunContext.Validate();
+            if (ChecksToRun.Count <= 0)
+            {
+                MessageBox.Show(
+                    @"No checks provided.",
+                    @"Notice...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Hide();
+                return;
+            }
+
+            // Show the progress bar as we kick off our work.
+            ShowProgress();
+
+            // clear the previous results
+            CheckResults.Clear();
+
+            GetBibleContent();
+
+            int checkCount = CheckRunContext.Books.Count() + 1;
+            foreach (var check in ChecksToRun)
+            {
+                RunCheck(check);
+                OnCheckUpdated(ALL_PROJECTS_INDEX);
+                Application.DoEvents();
+            }
+            HideProgress();
 
             // populate the checks results table
             PopulateChecksDataGridView();
@@ -566,11 +743,123 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
+        /// Gets and stores the scripture content for the specified book.
+        /// </summary>
+        /// <param name="inputBookNum">Book number (1-based).</param>
+        private Task GetBookContentTask(int inputBookNum)
+        {
+            return Task.Run(() =>
+            {
+                // wait to get started
+                _runSemaphore.Wait();
+
+                if (!ProjectSb.TryAdd(inputBookNum, new StringBuilder()))
+                {
+                    throw new ArgumentException($"There's already an entry for book {inputBookNum} in {nameof(ProjectSb)}");
+                }
+                var bookSb = new StringBuilder();
+
+                // track where we are for error reporting
+                var currBookNum = inputBookNum;
+                var currChapterNum = 0;
+                var currVerseNum = 0;
+
+                try
+                {
+                    // get utility items
+                    var versificationName = Host.GetProjectVersificationName(CheckRunContext.Project);
+
+                    // needed to track empty chapters
+                    var emptyVerseCtr = 0;
+
+                    // determine chapter range using check area and user's location in Paratext
+                    var minChapter = (CheckRunContext.CheckScope == CheckScope.CHAPTER)
+                            ? CheckRunContext.Chapters.Min()
+                            : 1;
+                    var maxChapter = (CheckRunContext.CheckScope == CheckScope.CHAPTER)
+                        ? CheckRunContext.Chapters.Max()
+                        : Host.GetLastChapter(currBookNum, versificationName);
+
+                    // iterate chapters
+                    for (var chapterNum = minChapter;
+                            chapterNum <= maxChapter;
+                            chapterNum++)
+                    {
+                        var chapterSb = new StringBuilder();
+                        currChapterNum = chapterNum;
+
+                        // iterate verses
+                        var lastVerseNum = Host.GetLastVerse(currBookNum, chapterNum, versificationName);
+                        for (var verseNum = 0; // verse 0 = intro text
+                            verseNum <= lastVerseNum;
+                            verseNum++)
+                        {
+                            currVerseNum = verseNum;
+
+                            try
+                            {
+                                // Check if the parallel.ForEach has been cancelled. The verse is the smallest entitity granularity
+                                _runCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                                var verseLocation = new VerseLocation(currBookNum, chapterNum, verseNum);
+                                var verseText = ImportManager.Extract(verseLocation);
+
+                                // empty text = consecutive check, in case we're looking at an empty chapter
+                                if (IsNullOrWhiteSpace(verseText))
+                                {
+                                    emptyVerseCtr++;
+                                    if (emptyVerseCtr > MainConsts.MAX_CONSECUTIVE_EMPTY_VERSES)
+                                    {
+                                        break; // no beginning text = empty chapter (skip)
+                                    }
+                                }
+                                // else, take apart text
+                                emptyVerseCtr = 0;
+
+                                // build the scoped strings
+                                ProjectSb[inputBookNum].AppendLine(verseText);
+                                bookSb.AppendLine(verseText);
+                                chapterSb.AppendLine(verseText);
+
+                                _verseContent[verseLocation.VerseCoordinate] = verseText;
+                            }
+                            catch (ArgumentException)
+                            {
+                                // arg exceptions occur when verses are missing,
+                                // which they can be for given translations (ignore and move on)
+                            }
+                        }
+
+                        _chapterContent[BookUtil.BcvToRef(currBookNum, currChapterNum, 0)] = chapterSb.ToString();
+                    }
+
+                    _bookContent[BookUtil.BcvToRef(currBookNum, 0, 0)] = bookSb.ToString();
+
+                    OnCheckUpdated(ALL_PROJECTS_INDEX);
+                }
+                catch (OperationCanceledException)
+                {
+                    // A cancel occurred. We can ignore.
+                }
+                catch (Exception ex)
+                {
+                    var messageText =
+                        $"Error: Can't load Bible content: {currBookNum}.{currChapterNum}.{currVerseNum} in project: \"{CheckRunContext.Project}\" (error: {ex.Message}).";
+
+                    HostUtil.Instance.ReportError(messageText, ex);
+                }
+                finally
+                {
+                    _runSemaphore.Release();
+                }
+            });
+        }
+
+        /// <summary>
         /// This function creates and runs a check against a given book number.
         /// </summary>
         /// <param name="inputBookNum">Book number (1-based).</param>
-        private Task RunBookCheckTask(
-            int inputBookNum)
+        private Task RunBookCheckTask(int inputBookNum)
         {
             return Task.Run(() =>
             {
@@ -648,7 +937,7 @@ namespace TvpMain.Forms
                                 // check the verse with verse checks
                                 ExecuteChecksAndStoreResults(verseText, ChecksByScope[CheckScope.VERSE], currBookNum, currChapterNum, currVerseNum);
                             }
-                            catch (ArgumentException ae)
+                            catch (ArgumentException)
                             {
                                 // arg exceptions occur when verses are missing,
                                 // which they can be for given translations (ignore and move on)
@@ -1228,7 +1517,7 @@ namespace TvpMain.Forms
             LoadDeniedResults();
             SetSelectedBooks();
 
-            RunChecks();
+            RunChecksInOrder();
         }
 
         /// <summary>

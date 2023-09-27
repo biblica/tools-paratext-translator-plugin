@@ -26,6 +26,10 @@ using TvpMain.Project;
 using TvpMain.Text;
 using TvpMain.Util;
 using System.Xml.Serialization;
+using NDesk.DBus;
+using System.IdentityModel;
+using System.Runtime.Remoting.Messaging;
+using Icu.BreakIterators;
 
 namespace TvpMain.Forms
 {
@@ -84,12 +88,12 @@ namespace TvpMain.Forms
         /// <summary>
         /// The list of installed checks
         /// </summary>
-        List<CheckAndFixItem> _installedChecks;
+        List<IRunnable> _installedChecks;
 
         /// <summary>
         /// The list of local checks, can't be set as defaults
         /// </summary>
-        List<CheckAndFixItem> _localChecks;
+        List<IRunnable> _localChecks;
 
         /// <summary>
         /// Simple progress bar form for when the checks are being synchronized
@@ -105,7 +109,12 @@ namespace TvpMain.Forms
         /// This is a separate list of items to display within the grid. This allows
         /// for tracking state during filtering.
         /// </summary>
-        List<DisplayItem> _displayItems;
+        List<GridRowData> _gridData;
+
+        /// <summary>
+        /// Simple progress bar form for when items are being saved.
+        /// </summary>
+        private GenericProgressForm _copyProgressForm;
 
         /// <summary>
         /// This is a fixed CF for V1 TVP scripture reference checking
@@ -185,7 +194,7 @@ namespace TvpMain.Forms
             // set the copyright text
             Copyright.Text = MainConsts.COPYRIGHT;
             
-            UpdateDisplayItems();
+            UpdateGridData();
 
             if (_checkManager.RemoteRepositoryIsEnabled())
             {
@@ -214,111 +223,114 @@ namespace TvpMain.Forms
         /// <summary>
         /// After doing async download of latest checks, update the list (must be run in main thread)
         /// </summary>
-        private void UpdateDisplayItems()
+        private void UpdateGridData()
         {
             try
             {
-                // track display items that may already be selected,
-                // so they can stay selected
-                ISet<string> prevCheckedItems = (_displayItems == null
-                        ? Enumerable.Empty<string>()
-                        : _displayItems
-                            .Where(foundItem => foundItem.Selected)
-                            .Select(foundItem => foundItem.Id))
-                    .ToImmutableHashSet();
+                IEnumerable<(string Id, string Location)> prevCheckedRows = _gridData == null
+                        ? Enumerable.Empty<(string Id, string Location)>()
+                        : _gridData.Where(foundRow => foundRow.Selected)
+                            .Select(foundRow => (Id: foundRow.Id, Location: foundRow.Location));
 
                 // load all the checks into the list
-                _displayItems = new List<DisplayItem>();
+                _gridData = new List<GridRowData>();
 
                 // add the V1 defaults
-                // get if the check is available (item1), and if not, the text for the tooltip (item2)
-                var isCheckAvailableTupleRef = IsCheckAvailableForProject(_scriptureReferenceCf);
-                _displayItems.Add(new DisplayItem(
-                    prevCheckedItems.Contains(_scriptureReferenceCf.Id) ||
+                var isValidResultsRef = IsValidForProject(_scriptureReferenceCf);
+                bool isActiveRef = isValidResultsRef.Item1;
+                string toolTipTextRef = isValidResultsRef.Item2;
+                _gridData.Add(new GridRowData(
+                    prevCheckedRows.Contains<(string, string)>((_scriptureReferenceCf.Id, MainConsts.BUILTIN_REPO_NAME)) ||
                     IsCheckDefaultForProject(_scriptureReferenceCf),
                     MainConsts.BUILTIN_REPO_NAME,
+                    displayType(_scriptureReferenceCf),
                     _scriptureReferenceCf.Name,
                     _scriptureReferenceCf.Description,
                     _scriptureReferenceCf.Version,
-                    _scriptureReferenceCf.Languages != null && _scriptureReferenceCf.Languages.Length > 0
-                        ? string.Join(", ", _scriptureReferenceCf.Languages)
-                        : "All",
-                    _scriptureReferenceCf.Tags != null ? string.Join(", ", _scriptureReferenceCf.Tags) : "",
+                    displayLanguages(_scriptureReferenceCf.Languages),
+                    displayTags(_scriptureReferenceCf.Tags),
                     _scriptureReferenceCf.Id,
-                    isCheckAvailableTupleRef.Item1,
-                    isCheckAvailableTupleRef.Item2,
+                    isActiveRef,
+                    toolTipTextRef,
                     _scriptureReferenceCf
                 ));
 
-                var isCheckAvailableTuplePunc = IsCheckAvailableForProject(_missingPunctuationCf);
-                _displayItems.Add(new DisplayItem(
-                    prevCheckedItems.Contains(_missingPunctuationCf.Id) ||
+                var isValidResultsPunc = IsValidForProject(_missingPunctuationCf);
+                bool isActivePunc = isValidResultsPunc.Item1;
+                string toolTipTextPunc = isValidResultsPunc.Item2;
+                _gridData.Add(new GridRowData(
+                    prevCheckedRows.Contains<(string, string)>((_missingPunctuationCf.Id, MainConsts.BUILTIN_REPO_NAME)) ||
                     IsCheckDefaultForProject(_missingPunctuationCf),
                     MainConsts.BUILTIN_REPO_NAME,
+                    displayType(_missingPunctuationCf),
                     _missingPunctuationCf.Name,
                     _missingPunctuationCf.Description,
                     _missingPunctuationCf.Version,
-                    _missingPunctuationCf.Languages != null && _missingPunctuationCf.Languages.Length > 0
-                        ? string.Join(", ", _missingPunctuationCf.Languages)
-                        : "All",
-                    _missingPunctuationCf.Tags != null ? string.Join(", ", _missingPunctuationCf.Tags) : "",
+                    displayLanguages(_missingPunctuationCf.Languages),
+                    displayTags(_missingPunctuationCf.Tags),
                     _missingPunctuationCf.Id,
-                    isCheckAvailableTuplePunc.Item1,
-                    isCheckAvailableTuplePunc.Item2,
+                    isActivePunc,
+                    toolTipTextPunc,
                     _missingPunctuationCf
                 ));
+
 
                 // add all the known remote checks
                 if (_checkManager.RemoteRepositoryIsEnabled())
                 {
-                    _installedChecks = _checkManager.GetInstalledCheckAndFixItems();
+                    _installedChecks = _checkManager.GetInstalledItems();
                 }
                 else
                 {
-                    _installedChecks = new List<CheckAndFixItem>();
+                    _installedChecks = new List<IRunnable>();
                 }
                 _installedChecks.Sort((x, y) => x.Name.CompareTo(y.Name));
                 foreach (var item in _installedChecks)
                 {
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
-                    var isCheckAvailableTuple = IsCheckAvailableForProject(item);
-                    _displayItems.Add(new DisplayItem(
-                        prevCheckedItems.Contains(item.Id) || IsCheckDefaultForProject(item),
+                    var isValidResults = IsValidForProject(item);
+                    bool isActive = isValidResults.Item1;
+                    string toolTipText = isValidResults.Item2;
+                    _gridData.Add(new GridRowData(
+                        prevCheckedRows.Contains<(string, string)>((item.Id, MainConsts.REMOTE_REPO_NAME)) || IsCheckDefaultForProject(item),
                         MainConsts.REMOTE_REPO_NAME,
+                        displayType(item),
                         item.Name,
                         item.Description,
                         item.Version,
-                        item.Languages != null && item.Languages.Length > 0 ? string.Join(", ", item.Languages) : "All",
-                        item.Tags != null ? string.Join(", ", item.Tags) : "",
+                        displayLanguages(item.Languages),
+                        displayTags(item.Tags),
                         item.Id,
-                        isCheckAvailableTuple.Item1,
-                        isCheckAvailableTuple.Item2,
+                        isActive,
+                        toolTipText,
                         item
                     ));
                 }
 
-                // add all the local checks
-                _localChecks = _checkManager.GetSavedCheckAndFixItems();
-                foreach (var item in _localChecks)
+                _localChecks = _checkManager.GetItems(MainConsts.LOCAL_REPO_NAME);
+                foreach (IRunnable item in _localChecks)
                 {
                     // get if the check is available (item1), and if not, the text for the tooltip (item2)
-                    var isCheckAvailableTuple = IsCheckAvailableForProject(item);
-                    _displayItems.Add(new DisplayItem(
-                        prevCheckedItems.Contains(item.Id) || false,
+                    var isValidResults = IsValidForProject(item);
+                    bool isActive = isValidResults.Item1;
+                    string toolTipText = isValidResults.Item2;
+                    _gridData.Add(new GridRowData(
+                        prevCheckedRows.Contains<(string, string)>((item.Id, MainConsts.LOCAL_REPO_NAME)) || false,
                         MainConsts.LOCAL_REPO_NAME,
+                        displayType(item),
                         item.Name,
                         item.Description,
                         item.Version,
-                        item.Languages != null && item.Languages.Length > 0 ? string.Join(", ", item.Languages) : "All",
-                        item.Tags != null ? string.Join(", ", item.Tags) : "",
+                        displayLanguages(item.Languages),
+                        displayTags(item.Tags),
                         item.Id,
-                        isCheckAvailableTuple.Item1,
-                        isCheckAvailableTuple.Item2,
+                        isActive,
+                        toolTipText,
                         item
                     ));
                 }
 
-                UpdateDisplayGrid();
+                UpdateGrid();
             }
             finally
             {
@@ -327,63 +339,195 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
-        /// Checks to see if a display item is a built-in check.
+        /// Replace an item in the checks list with a new version of that item. 
         /// </summary>
-        /// <param name="item">The item to check.</param>
-        /// <returns>true if the item is built-in. false otherwise.</returns>
-        private bool isBuiltIn(DisplayItem item)
+        /// <param name="oldRow">The grid row where the old item is currently located.</param>
+        /// <param name="newItem">The new version of the item.</param>
+        private void UpdateItem(DataGridViewRow oldRow, IRunnable newItem)
         {
-            return item.Location == MainConsts.BUILTIN_REPO_NAME;
+            var oldRowData = (GridRowData) oldRow.Tag;
+            var oldItem = oldRowData.Item;
+
+            var isValidResults = IsValidForProject(newItem);
+            bool isActive = isValidResults.Item1;
+            string toolTipText = isValidResults.Item2;
+            var newRowData = new GridRowData(
+                oldRow.Selected,
+                oldRow.Cells["CFLocation"].Value.ToString(),
+                displayType(newItem),
+                newItem.Name,
+                newItem.Description,
+                newItem.Version,
+                displayLanguages(newItem.Languages),
+                displayTags(newItem.Tags),
+                newItem.Id,
+                isActive,
+                toolTipText,
+                newItem
+            );
+
+            List<IRunnable> checkCache = isLocal(oldRowData.Location) ? _localChecks : _installedChecks;
+            int cacheIndex = checkCache.IndexOf(oldItem);
+            if (cacheIndex > -1)
+            {
+                checkCache.RemoveAt(cacheIndex);
+                checkCache.Insert(cacheIndex, newItem);
+            }
+
+            int rowDataIndex = _gridData.IndexOf(oldRowData);
+            if (rowDataIndex > -1)
+            {
+                _gridData.RemoveAt(rowDataIndex);
+                _gridData.Insert(rowDataIndex, newRowData);
+            }
+
+            DataGridViewRow newRow = NewGridRow(newRowData);
+            int rowIndex = oldRow.Index;
+            checksList.Rows.RemoveAt(rowIndex);
+            foreach (DataGridViewRow row in checksList.SelectedRows)
+            {
+                row.Selected = false;
+            }
+            checksList.Rows.Insert(rowIndex, newRow);
+            checksList.ClearSelection();
+            checksList.Rows[rowIndex].Selected = newRowData.Selected;
         }
 
         /// <summary>
-        /// Checks to see if a display item is a local check.
+        /// Generates the text that will be displayed in the type column of the grid
+        /// based whether the item is a check or a group.
         /// </summary>
-        /// <param name="item">The item to check.</param>
-        /// <returns>true if the item is a local check. false otherwise.</returns>
-        private bool isLocal(DisplayItem item)
+        /// <param name="item">The item to evaluate</param>
+        /// <returns>The text to display in the type column</returns>
+        private string displayType(IRunnable item)
         {
-            return item.Location == MainConsts.LOCAL_REPO_NAME;
+            string type = "";
+            if (item is CheckAndFixItem)
+            {
+                type = "\u25cf";    // 9679 - medium dot
+            }
+            else if (item is CheckGroup)
+            {
+                type = "\u26ec";   // 9964 - three dots
+            }
+
+            return type;
+        }
+
+        /// <summary>
+        /// Generates the text that will be displayed in the Languages column of the grid
+        /// based on the value of the Languages property of a check or group.
+        /// </summary>
+        /// <param name="languages">The Languages property value</param>
+        /// <returns>The text to display in the Languages column</returns>
+        private string displayLanguages(string[] languages)
+        {
+            if (languages is null)
+            {
+                return "<INVALID>";
+            }
+            else if (languages.Length == 0)
+            {
+                return "All";
+            }
+
+            return string.Join(", ", languages);
+        }
+
+        /// <summary>
+        /// Generates the text the will be displayed in the Tags column of the grid
+        /// based on the value of the Tags property of a check or group.
+        /// </summary>
+        /// <param name="languages">The Tags property value</param>
+        /// <returns>The text to display in the Tags column</returns>
+        private string displayTags(string[] tags)
+        {
+            if (tags is null)
+            {
+                return "<INVALID>";
+            }
+            else if (tags.Length == 0)
+            {
+                return "";
+            }
+
+            return tags != null ? string.Join(", ", tags) : "";
+        }
+
+        /// <summary>
+        /// Checks to see if a repository name matches the built-in repository name.
+        /// </summary>
+        /// <param name="location">The repository name.</param>
+        /// <returns>true if the location matches the built-in repository name.</returns>
+        private bool isBuiltIn(string location)
+        {
+            return location == MainConsts.BUILTIN_REPO_NAME;
+        }
+
+        /// <summary>
+        /// Checks to see if a repository name matches the local repository.
+        /// </summary>
+        /// <param name="location">The repository name.</param>
+        /// <returns>true if the location matches the local repository.</returns>
+        private bool isLocal(string location)
+        {
+            return location == MainConsts.LOCAL_REPO_NAME;
+        }
+
+        /// <summary>
+        /// Checks to see if a repository name matches the remote repository.
+        /// </summary>
+        /// <param name="location">The repository name.</param>
+        /// <returns>true if the location matches the remote repository.</returns>
+        private bool isRemote(string location)
+        {
+            return location == MainConsts.REMOTE_REPO_NAME;
         }
 
         /// <summary>
         /// Update what is shown on the form, in the list of checks, filtering for the search if applicable
         /// </summary>
-        private void UpdateDisplayGrid()
+        private void UpdateGrid()
         {
             checksList.Enabled = false;
             checksList.Rows.Clear();
 
-            foreach (var displayItem in _displayItems)
+            foreach (var rowData in _gridData)
             {
                 if (filterTextBox.Text.Length >= MIN_SEARCH_CHARACTERS &&
-                    displayItem.Name.IndexOf(filterTextBox.Text, StringComparison.OrdinalIgnoreCase) < 0)
+                    rowData.Name.IndexOf(filterTextBox.Text, StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     continue;
                 }
-
-                var rowIndex = checksList.Rows.Add(
-                    displayItem.Location,
-                    displayItem.Name,
-                    displayItem.Version,
-                    displayItem.Languages,
-                    displayItem.Tags,
-                    displayItem.Id
-                );
-                checksList.Rows[rowIndex].Selected = displayItem.Selected;
-                checksList.Rows[rowIndex].Tag = displayItem;
-
-                // disable row if it can't be used on this project
-                if (displayItem.Active)
-                {
-                    continue;
-                }
-
-                checksList.Rows[rowIndex].DefaultCellStyle.BackColor = SystemColors.Control;
-                checksList.Rows[rowIndex].DefaultCellStyle.ForeColor = SystemColors.GrayText;
+                bool rowSelected = rowData.Selected;
+                int rowIndex = checksList.Rows.Add(NewGridRow(rowData));
+                checksList.Rows[rowIndex].Selected = rowSelected;
             }
 
             checksList.Enabled = true;
+        }
+
+        private DataGridViewRow NewGridRow(GridRowData rowData)
+        {
+            var newRow = new DataGridViewRow();
+            newRow.CreateCells(checksList);
+
+            newRow.Cells[0].Value = rowData.Location;
+            newRow.Cells[1].Value = rowData.Type;
+            newRow.Cells[2].Value = rowData.Name;
+            newRow.Cells[3].Value = rowData.Version;
+            newRow.Cells[4].Value = rowData.Languages;
+            newRow.Cells[5].Value = rowData.Tags;
+            newRow.Cells[6].Value = rowData.Id;
+            newRow.Tag = rowData;
+
+            if (!rowData.Active)
+            {
+                newRow.DefaultCellStyle.BackColor = SystemColors.Control;
+                newRow.DefaultCellStyle.ForeColor = SystemColors.GrayText;
+            }
+
+            return newRow;
         }
 
         /// <summary>
@@ -436,7 +580,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ExitMenuItem_Click(object sender, EventArgs e)
         {
             Close();
         }
@@ -446,21 +590,22 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void LicenseToolStripMenuItem_Click(object sender, EventArgs e)
+        private void LicenseMenuItem_Click(object sender, EventArgs e)
         {
             FormUtil.StartLicenseForm();
         }
 
         /// <summary>
-        /// This function is to handle when the "Run Checks" button is clicked. We pass the checks and notion of what to check to the CheckResultsForm to process.
+        /// This function is to handle when the "Run Checks" button is clicked. 
+        /// We pass the checks and notion of what to check to the CheckResultsForm to process.
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
         private void RunChecksButton_Click(object sender, EventArgs e)
         {
-            // grab the selected checks
-            var selectedChecks = GetSelectedChecks();
-            if (selectedChecks.Count == 0)
+            // grab the selected runnable items
+            var selectedRunnables = GetSelectedRunnables();
+            if (selectedRunnables.Count == 0)
             {
                 MessageBox.Show(
                     @"No checks provided.",
@@ -472,14 +617,18 @@ namespace TvpMain.Forms
             var projectRtoL = _host.GetProjectRtoL(_activeProjectName);
             if (projectRtoL)
             {
-                // Track list of incompatible checks
+                // Track list of incompatible items
                 var cautionaryItems = new List<String>();
 
-                foreach (var item in selectedChecks)
+                foreach (var runnable in selectedRunnables)
                 {
-                    if (item.Tags == null || !item.Tags.Contains("RTL"))
+                    foreach (var checkKvp in runnable.Checks)
                     {
-                        cautionaryItems.Add(item.Name);
+                        var check = checkKvp.Value;
+                        if (check.Tags == null || !check.Tags.Contains("RTL"))
+                        {
+                            cautionaryItems.Add(check.Name);
+                        }
                     }
                 }
 
@@ -506,7 +655,7 @@ namespace TvpMain.Forms
                 _activeProjectName,
                 _projectManager,
                 _selectedBooks,
-                selectedChecks,
+                selectedRunnables,
                 checkContext
             );
 
@@ -518,23 +667,19 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
-        /// This function will return the <c>CheckAndFixItem</c>s that are selected in the Run Checks list.
+        /// This function will return the runnable items that are selected in the Run Checks list.
         /// </summary>
-        /// <returns>The selected <c>CheckAndFixItem</c>s</returns>
-        private List<CheckAndFixItem> GetSelectedChecks()
+        /// <returns>The selected runnable items</returns>
+        private List<IRunnable> GetSelectedRunnables() 
         {
-            var selectedChecks = new List<CheckAndFixItem>();
+            var selectedRunnables = new List<IRunnable>();
 
-            // grab the selected checks
-            foreach (DataGridViewRow row in checksList.Rows)
+            foreach (DataGridViewRow row in checksList.SelectedRows)
             {
-                if (row.Selected)
-                {
-                    selectedChecks.Add(((DisplayItem)row.Tag).Item);
-                }
+                selectedRunnables.Add(((GridRowData)row.Tag).Item);
             }
 
-            return selectedChecks;
+            return selectedRunnables;
         }
 
         /// <summary>
@@ -682,24 +827,24 @@ namespace TvpMain.Forms
             {
                 foreach (DataGridViewRow row in checksList.Rows)
                 {
-                    var item = (DisplayItem) checksList.Rows[row.Index].Tag;
+                    var rowData = (GridRowData) checksList.Rows[row.Index].Tag;
 
                     if (row.Selected)
                     {
-                        if (!_projectCheckSettings.DefaultCheckIds.Contains(item.Id))
+                        if (!_projectCheckSettings.DefaultCheckIds.Contains(rowData.Id))
                         {
                             // do not allow local only to be in the defaults list
-                            if (!_localChecks.Contains(item.Item))
+                            if (!_localChecks.Contains(rowData.Item))
                             {
-                                _projectCheckSettings.DefaultCheckIds.Add(item.Id);
+                                _projectCheckSettings.DefaultCheckIds.Add(rowData.Id);
                             }
                         }
                     }
                     else
                     {
-                        if (_projectCheckSettings.DefaultCheckIds.Contains(item.Id))
+                        if (_projectCheckSettings.DefaultCheckIds.Contains(rowData.Id))
                         {
-                            _projectCheckSettings.DefaultCheckIds.Remove(item.Id);
+                            _projectCheckSettings.DefaultCheckIds.Remove(rowData.Id);
                         }
                     }
                 }
@@ -716,64 +861,86 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void ResetToProjectDefaults_Click(object sender, EventArgs e)
         {
-            UpdateDisplayItems();
+            UpdateGridData();
         }
 
         /// <summary>
-        /// Determines if the given check/fix item is a default on the project
+        /// Determines if the given runnable item is a default on the project
         /// </summary>
         /// <param name="item"></param>
-        /// <returns>if the given check/fix item is a default on the project</returns>
-        private bool IsCheckDefaultForProject(CheckAndFixItem item)
+        /// <returns>if the given runnable item is a default on the project</returns>
+        private bool IsCheckDefaultForProject(IRunnable item)
         {
             return _projectCheckSettings.DefaultCheckIds.Contains(item.Id);
         }
 
         /// <summary>
-        /// Utility method to determine if the specified check can be run on this project
-        ///  Will filter out based on language
-        ///  Will filter out based on Tags, add additional tag support here
+        /// Utility method to determine if the specified check or group can be run on this project
+        /// - Will filter out based on language
+        /// - Will filter out based on Tags, add additional tag support here
         /// </summary>
-        /// <param name="item">The check/fix item to use to determine if it can be used against the current project</param>
-        /// <returns>If the given CFitem is available (item1) to be used with the project. If not, the tooltip to use for the disabled row (item2).</returns>
-        private Tuple<bool, string> IsCheckAvailableForProject(CheckAndFixItem item)
+        /// <param name="item">The check or group to determine if it can be used against the current project</param>
+        /// <returns>If the given item is available (item1) to be used with the project. If not, the tooltip to use for the disabled row (item2).</returns>
+        private Tuple<bool, string> IsValidForProject(IRunnable item)
         {
-            var languageId = _host.GetProjectLanguageId(_activeProjectName, "translation validation").ToUpper();
-            var projectRtl = _host.GetProjectRtoL(_activeProjectName);
-
-            // filter based on language
-            var languageEnabled = item.Languages == null
-                                  || (item.Languages != null && item.Languages.Length == 0)
-                                  || (item.Languages != null && item.Languages.Length > 0 &&
-                                      item.Languages.Contains(languageId, StringComparer.OrdinalIgnoreCase));
-
-            // filter based on Tags
-
-            // RTL Tag support
-            var itemRtl = (item.Tags != null) && (item.Tags.Contains("RTL"));
-
-            var rtlEnabled = !(itemRtl && !projectRtl);
-
-            Debug.WriteLine("Project Language: " + languageId);
-            Debug.WriteLine("Project RTL: " + projectRtl);
-            Debug.WriteLine("Item RTL: " + rtlEnabled);
-
+            var isGroup = item is CheckGroup;
+            var isValid = true;
             var filterReasons = new List<string>();
 
+            var languageId = _host.GetProjectLanguageId(_activeProjectName, "translation validation");
+            var projectRtl = _host.GetProjectRtoL(_activeProjectName);
 
-            // set the response strings for the appropriate filter reason
-            if (!languageEnabled)
+            foreach (var checkKvp in item.Checks)
             {
-                filterReasons.Add("This check doesn't support this project's language.");
+                if (checkKvp.Value is null)
+                {
+                    isValid = false;
+                    filterReasons.Add("- This group uses a check that could not be found. The check may have been deleted.");
+                }
+                else
+                {
+                    CheckAndFixItem check = checkKvp.Value;
+                    // filter based on language
+                    var languageEnabled = check?.Languages == null
+                                          || (check.Languages != null && check.Languages.Length == 0)
+                                          || (check.Languages != null && check.Languages.Length > 0 &&
+                                              check.Languages.Contains(languageId, StringComparer.OrdinalIgnoreCase));
+
+                    // filter based on Tags
+
+                    // RTL Tag support
+                    var checkRtl = (check?.Tags != null) && (check.Tags.Contains("RTL"));
+                    var rtlEnabled = !(checkRtl && !projectRtl);
+
+                    Debug.WriteLine("Project Language: " + languageId);
+                    Debug.WriteLine("Project RTL: " + projectRtl);
+                    Debug.WriteLine("Item RTL: " + rtlEnabled);
+
+                    // set the response strings for the appropriate filter reason
+                    string typeText = isGroup ? "group contains a check that" : "check";
+                    if (!languageEnabled)
+                    {
+                        filterReasons.Add($"- This {typeText} does not support this project's language.");
+                    }
+                    if (!rtlEnabled)
+                    {
+                        filterReasons.Add($"- This {typeText} is for RTL languages only.");
+                    }
+
+                    isValid = languageEnabled && rtlEnabled;
+                }
+
+                if (!isValid) break;
             }
 
-            if (!rtlEnabled)
+            if (item.Checks.Count < 1)
             {
-                filterReasons.Add("This check is for RTL languages only.");
+                isValid = false;
+                filterReasons.Add("- This group does not contain any checks.");
             }
 
-            var response = String.Join("\n", filterReasons);
-            return new Tuple<bool, string>(languageEnabled && rtlEnabled, response);
+            var toolTipText = String.Join("\n", filterReasons);
+            return new Tuple<bool, string>(isValid, toolTipText);
         }
 
         // 
@@ -789,22 +956,45 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void ChecksList_CellMouseEnter(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex <= -1)
+            if (e.RowIndex < 0) return;
+            var rowData = (GridRowData) checksList.Rows[e.RowIndex].Tag;
+            if (rowData == null) return;
+            string newHelpText = "";
+            var isValidResults = IsValidForProject(rowData.Item);
+            if (!isValidResults.Item1)
             {
-                return;
+                newHelpText += "NOTE: This item cannot be run on this project for the following reasons:" + Environment.NewLine;
+                newHelpText += isValidResults.Item2 + Environment.NewLine + Environment.NewLine;
             }
-
-            var item = (DisplayItem) checksList.Rows[e.RowIndex].Tag;
+            string typeText = rowData.Item is CheckGroup ? "Group: " : "Check: ";
+            newHelpText += typeText + rowData.Name + Environment.NewLine;
+            if (!String.IsNullOrWhiteSpace(rowData.Description))
+            {
+                newHelpText += "Description: " + rowData.Description + Environment.NewLine;
+            }
+            if (rowData.Item is CheckAndFixItem check)
+            {
+                newHelpText += "Scope: " + check.Scope + Environment.NewLine;
+            }
+            if (rowData.Item is CheckGroup group && group.Checks.Count > 0)
+            {
+                newHelpText += "Check List:" + Environment.NewLine;
+                foreach (var checkKvp in group.Checks)
+                {
+                    if (checkKvp.Value is null)
+                    {
+                        newHelpText += "- <MISSING> " + checkKvp.Key + Environment.NewLine;
+                    }
+                    else
+                    {
+                        newHelpText += "- " + checkKvp.Value.Name + Environment.NewLine;
+                    }
+                }
+            }
+            helpTextBox.SelectionStart = 0;
             helpTextBox.Clear();
-
-            if (!IsCheckAvailableForProject(item.Item).Item1)
-            {
-                helpTextBox.AppendText("NOTE: This check/fix is not selectable for this project" + Environment.NewLine +
-                                       Environment.NewLine);
-            }
-
-            helpTextBox.AppendText("Check/Fix: " + item.Name + Environment.NewLine);
-            helpTextBox.AppendText(item.Description);
+            helpTextBox.AppendText(newHelpText);
+            helpTextBox.SelectionStart = 0;
         }
 
         /// <summary>
@@ -913,45 +1103,7 @@ namespace TvpMain.Forms
         /// <param name="e">The event information that triggered this call</param>
         private void FilterTextBox_TextChanged(object sender, EventArgs e)
         {
-            UpdateDisplayGrid();
-        }
-
-        /// <summary>
-        /// Opens a local check in the editor from the RunChecks UI.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ChecksList_EditCheck(object sender, DataGridViewCellEventArgs e)
-        {
-            // Get the check that was clicked
-            var displayItem = _displayItems[e.RowIndex];
-
-            // Non-admins can only edit local checks
-            if (isBuiltIn(displayItem))
-            {
-                // Dialog box that shows if attempts to edit a built-in check
-                MessageBox.Show("Built-in checks are not able to be edited.", "Warning");
-                return;
-            }
-            else if (!isLocal(displayItem) && !_checkManager.IsCurrentUserRemoteAdmin())
-            {
-                // Dialog box that shows if a user attempts to edit a check as a non-admin
-                MessageBox.Show("Only administrators can edit non-local checks.", "Warning");
-                return;
-            }
-
-            var checkDir = isLocal(displayItem)
-                ? _checkManager.GetLocalRepoDirectory()
-                : _checkManager.GetInstalledChecksDirectory();
-
-            // Get the file location for the selected check
-            var fileName = _checkManager.GetCheckAndFixItemFilename(displayItem.Item);
-            var fullPath = Path.Combine(checkDir, fileName);
-
-            // Open the CheckEditor with the selected check
-            new CheckEditor(_checkManager, new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
-
-            UpdateDisplayItems();
+            UpdateGrid();
         }
 
         /// <summary>
@@ -959,7 +1111,7 @@ namespace TvpMain.Forms
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
-        private void contactSupportToolStripMenuItem_Click(object sender, EventArgs e)
+        private void contactSupportMenuItem_Click(object sender, EventArgs e)
         {
             //Call the Process.Start method to open the default browser
             //with a URL:
@@ -1082,8 +1234,7 @@ namespace TvpMain.Forms
             UpdateRefreshTooltip(DateTime.Now);
             CheckManager.HasSyncRun = true;
             refreshButton.Enabled = true;
-            UpdateDisplayItems();
-            //checksList.Invoke(new MethodInvoker(UpdateDisplayItems));
+            UpdateGridData();
             EndCheckSynchronization();
         }
 
@@ -1126,15 +1277,12 @@ namespace TvpMain.Forms
         /// </summary>
         private void deleteSelectedRows()
         {
-            if (checksList.SelectedRows.Count > 0)
+            if (checksList.SelectedRows.Count < 1) return;
+            if (!confirmDeleteSelectedRows()) return;
+
+            foreach (DataGridViewRow row in checksList.SelectedRows)
             {
-                if (confirmDeleteSelectedRows())
-                {
-                    foreach (DataGridViewRow row in checksList.SelectedRows)
-                    {
-                        deleteChecksListItem(row.Index);
-                    }
-                }
+                deleteChecksListItem(row.Index);
             }
         }
 
@@ -1144,34 +1292,40 @@ namespace TvpMain.Forms
         /// <param name="rowIndex">Index of the row to delete.</param>
         private void deleteChecksListItem(int rowIndex)
         {
-            DisplayItem displayItem = (DisplayItem) checksList.Rows[rowIndex].Tag;
-            CheckAndFixItem checkItem = displayItem.Item;
-            if (_localChecks.Contains(checkItem))
+            var rowData = (GridRowData) checksList.Rows[rowIndex].Tag;
+            IRunnable item = rowData.Item;
+            string itemLocation = rowData.Location;
+            if (isLocal(itemLocation))
             {
-                _checkManager.DeleteCheckAndFixItem(checkItem);
-                _localChecks.Remove(checkItem);
+                _checkManager.DeleteItem(item);
+                _localChecks.Remove(item);
             }
-            else if (_installedChecks.Contains(checkItem))
+            else if (isRemote(itemLocation))
             {
-                _checkManager.UnpublishAndUninstallCheckAndFixItem(checkItem);
-                _installedChecks.Remove(checkItem);
+                _checkManager.UnpublishAndUninstallItem(item);
+                _installedChecks.Remove(item);
+            }
+            int gridIndex = _gridData.FindIndex(rowData => Object.ReferenceEquals(item, rowData.Item));
+            if (gridIndex != -1)
+            {
+                _gridData.RemoveAt(gridIndex);
             }
             checksList.Rows.RemoveAt(rowIndex);
-
         }
 
         /// <summary>
-        /// Checks to see if invalid checks are selected.
+        /// Checks to see if inactive rows are selected. A row is inactivated
+        /// if it contains an item that can not be run on the current project.
         /// </summary>
         /// <param name="dataGridView">The data grid to check.</param>
-        /// <returns>True if invalid checks are selected. False otherwise. </returns>
+        /// <returns>true if inactive rows are selected.</returns>
         private bool inactiveChecksAreSelected(DataGridView dataGridView)
         {
             foreach (DataGridViewRow row in dataGridView.Rows)
             {
                 if (row.Selected && row.Tag != null)
                 {
-                    var rowData = (DisplayItem) row.Tag;
+                    var rowData = (GridRowData) row.Tag;
                     if (!rowData.Active)
                     {
                         return true;
@@ -1239,7 +1393,7 @@ namespace TvpMain.Forms
             {
                 if (e.Row.Tag != null)
                 {
-                    var rowData = (DisplayItem)e.Row.Tag;
+                    var rowData = (GridRowData)e.Row.Tag;
                     rowData.Selected = e.Row.Selected;
                 }
 
@@ -1253,6 +1407,7 @@ namespace TvpMain.Forms
         /// - If an item row is right-clicked enable the context menu.
         /// - Disable the edit option if the selected row is not editable.
         /// - Disable the delete option if any of the selected rows are not deleteable
+        /// - Setup the copy to option
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
@@ -1263,6 +1418,8 @@ namespace TvpMain.Forms
             {
                 // When an unselected row is right clicked, select it and unselect all other rows.
                 DataGridViewRow row = dataGridView.Rows[e.RowIndex];
+                var rowData = (GridRowData)(row.Tag);
+
                 if (!row.Selected)
                 {
                     row.DataGridView.ClearSelection();
@@ -1273,15 +1430,51 @@ namespace TvpMain.Forms
                 // If a data row is right clicked enable the context menu.
                 checksList.ContextMenuStrip = checksListContextMenu;
 
+                // Enable/Disable the Edit option on the context menu
                 if (checksList.SelectedRows.Count != 1 ||
                     !RowIsEditable(checksList.SelectedRows[0]))
                 {
                     editContextMenuItem.Enabled = false;
                 }
-                // Disable the delete option on the context menu if any selected rows are not deleteable
+                else
+                {
+                    editContextMenuItem.Enabled = true;
+                }
+
+                // Enable/Disable the Dekete option on the context menu
                 if (!AllSelectedRowsAreDeletable())
                 {
                     deleteContextMenuItem.Enabled = false;
+                }
+                else
+                {
+                    deleteContextMenuItem.Enabled = true;
+                }
+
+                // Enable/Disable the Copy To option on the context menu
+                if (isBuiltIn(rowData.Location) || checksList.SelectedRows.Count != 1)
+                {
+                    copyToContextMenuItem.Enabled = false;
+                }
+                else
+                {
+                    copyToContextMenuItem.DropDownItems.Clear();
+                    foreach (string repository in _checkManager.Repositories)
+                    {
+                        if (repository == (string)row.Cells["CFLocation"].Value) continue;
+                        var menuItem = new ToolStripMenuItem();
+                        menuItem.Text = repository;
+                        menuItem.Click += new EventHandler(this.CopyToLocation_Click);
+                        copyToContextMenuItem.DropDownItems.Add(menuItem);
+                    }
+                    if (copyToContextMenuItem.DropDownItems.Count < 1)
+                    {
+                        copyToContextMenuItem.Enabled = false;
+                    }
+                    else
+                    {
+                        copyToContextMenuItem.Enabled = true;
+                    }
                 }
             }
         }
@@ -1303,15 +1496,15 @@ namespace TvpMain.Forms
         /// <returns>true if the row is editable. false otherwise.</returns>
         private bool RowIsEditable(DataGridViewRow row)
         {
-            var item = (DisplayItem)row.Tag;
+            var rowData = (GridRowData)row.Tag;
             // Built-in checks cannot be edited.
-            if (isBuiltIn(item))
+            if (isBuiltIn(rowData.Location))
             {
                 return false;
             }
 
             // Non-admins can only edit local checks.
-            if (!isLocal(item) && !_checkManager.IsCurrentUserRemoteAdmin())
+            if (!isLocal(rowData.Location) && !_checkManager.IsCurrentUserRemoteAdmin())
             {
                 return false;
             }
@@ -1326,8 +1519,8 @@ namespace TvpMain.Forms
         /// <returns>true if the row is deletable. false otherwise.</returns>
         private bool RowIsDeletable(DataGridViewRow row)
         {
-            var item = row.Tag as DisplayItem;
-            if (item == null || isBuiltIn(item))
+            var rowData = row.Tag as GridRowData;
+            if (rowData == null || isBuiltIn(rowData.Location))
             {
                 return false;
             }
@@ -1353,25 +1546,64 @@ namespace TvpMain.Forms
         }
 
         /// <summary>
-        /// Reenable disabled menu items when the context menu closes.
-        /// </summary>
-        /// <param name="sender">The control that sent this event</param>
-        /// <param name="e">The event information that triggered this call</param>
-        private void checksListContextMenu_Closed(object sender, ToolStripDropDownClosedEventArgs e)
-        {
-            editContextMenuItem.Enabled = true;
-            deleteContextMenuItem.Enabled = true;
-        }
-
-        /// <summary>
         /// Start the check/fix editor from the menu
         /// </summary>
         /// <param name="sender">The control that sent this event</param>
         /// <param name="e">The event information that triggered this call</param>
         private void newCheckMenuItem_Click(object sender, EventArgs e)
         {
-            new CheckEditor(_checkManager).ShowDialog(this);
-            UpdateDisplayItems();
+            string repositoryName;
+            string[] repositories = _checkManager.Repositories;
+            if (repositories.Count() > 1)
+            {
+                var form = new ChooseRepositoryForm(repositories);
+                DialogResult result = form.ShowDialog(this);
+                if (result == DialogResult.OK)
+                {
+                    repositoryName = form.GetRepository();
+                }
+                else
+                {
+                    return;
+                }
+            }
+            else
+            {
+                repositoryName = repositories[0];
+            }
+
+            new CheckEditor(_checkManager, repositoryName).ShowDialog(this);
+            UpdateGridData();
+        }
+
+        /// <summary>
+        /// Start the group editor from the main menu
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void newGroupMenuItem_Click(object sender, EventArgs e)
+        {
+            string repositoryName;
+            string[] repositories = _checkManager.Repositories;
+            if (repositories.Count() > 1)
+            {
+                var form = new ChooseRepositoryForm(repositories);
+                DialogResult result = form.ShowDialog(this);
+                if (result == DialogResult.OK)
+                {
+                    repositoryName = form.GetRepository();
+                }
+                else
+                {
+                    return;
+                }
+            }
+            else
+            {
+                repositoryName = repositories[0];
+            }
+            new GroupEditorForm(_checkManager, repositoryName).ShowDialog(this);
+            UpdateGridData();
         }
 
         /// <summary>
@@ -1404,8 +1636,8 @@ namespace TvpMain.Forms
                 else
                 {
                     refreshButton.Visible = false;
-                    UpdateDisplayItems();
-                    UpdateDisplayGrid();
+                    UpdateGridData();
+                    UpdateGrid();
                 }
             }
         }
@@ -1422,20 +1654,158 @@ namespace TvpMain.Forms
                 return;
             }
 
-            var displayItem = (DisplayItem)checksList.SelectedRows[0].Tag;
+            var row = checksList.SelectedRows[0];
+            var rowData = (GridRowData) row.Tag;
 
-            var checkDir = isLocal(displayItem)
-                ? _checkManager.GetLocalRepoDirectory()
-                : _checkManager.GetInstalledChecksDirectory();
+            var itemLocation = isLocal(rowData.Location) ? MainConsts.LOCAL_REPO_NAME : MainConsts.REMOTE_REPO_NAME;
+            if (rowData.Item is CheckAndFixItem check)
+            {
+                var form = new CheckEditor(_checkManager, check, itemLocation);
+                form.ShowDialog(this);
+                if (form.GetCheck() is CheckAndFixItem newCheck)
+                {
+                    check.Update(newCheck);
+                    UpdateItem(row, check);
+                }
+            }
+            else if (rowData.Item is CheckGroup group)
+            {
+                var form = new GroupEditorForm(_checkManager, group, itemLocation);
+                form.ShowDialog(this);
+                if (form.GetCheckGroup() is CheckGroup newGroup)
+                {
+                    group.Update(newGroup);
+                    UpdateItem(row, group);
+                }
+            }
+            else
+            {
+                return;
+            }
+        }
 
-            // Get the file location for the selected check
-            var fileName = _checkManager.GetCheckAndFixItemFilename(displayItem.Item);
-            var fullPath = Path.Combine(checkDir, fileName);
+        /// <summary>
+        /// Copy the selected item to the specified repository.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void CopyToLocation_Click(object sender, EventArgs e)
+        {
+            if (checksList.SelectedRows.Count != 1) return;
 
-            // Open the CheckEditor with the selected check
-            new CheckEditor(_checkManager, new FileInfo(fullPath), !isLocal(displayItem)).ShowDialog(this);
+            string toLocation = null;
+            if (sender is ToolStripMenuItem menuItem)
+            {
+                toLocation = menuItem.Text;
+            }
+            if (toLocation is null || isBuiltIn(toLocation)) return;
 
-            UpdateDisplayItems();
+            var row = checksList.SelectedRows[0];
+            var rowData = (GridRowData)row.Tag;
+            var item = rowData.Item;
+            string fromLocation = rowData.Location;
+
+            if (isBuiltIn(fromLocation)) return;
+
+            if (isRemote(toLocation))
+            {
+                var publishResult = MessageBox.Show(@"Are you sure you would like to copy this item?",
+                    @"Confirm Copy", MessageBoxButtons.YesNo);
+                if (publishResult == DialogResult.Yes)
+                {
+                    CopyToRemote(item);
+                }
+            }
+            else
+            {
+                if (_checkManager.SaveItem(item, MainConsts.LOCAL_REPO_NAME))
+                {
+                    UpdateGridData();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Save the check group to the remote repository.
+        /// </summary>
+        private void CopyToRemote(IRunnable item)
+        {
+            _copyProgressForm = new GenericProgressForm("Saving item...");
+            _copyProgressForm.Show(this);
+
+
+            var copyWorker = new BackgroundWorker();
+            copyWorker.DoWork += CopyWorker_DoWork;
+            copyWorker.RunWorkerCompleted += CopyWorker_RunWorkerCompleted;
+            copyWorker.RunWorkerAsync(item);
+        }
+
+        /// <summary>
+        /// Saves an item asynchronously.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void CopyWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            if (e.Argument is IRunnable itemToSave)
+            {
+                _checkManager.SynchronizeInstalledChecks();
+                var remoteChecks = _checkManager.GetInstalledItems();
+                var found = false;
+
+                foreach (var checkAndFixItem in remoteChecks.Where(checkAndFixItem =>
+                    checkAndFixItem.Id.Equals(itemToSave.Id) && checkAndFixItem.Version.Equals(itemToSave.Version)))
+                {
+                    found = true;
+                }
+
+                if (found)
+                {
+                    MessageBox.Show(@"This version of the group already exists in the repository, you must increment the version before trying to publish.",
+                        @"Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    e.Result = false;
+                }
+                else
+                {
+                    _checkManager.PublishItem(itemToSave);
+                    e.Result = true;
+                }
+            }
+            else
+            {
+                e.Result = false;
+            }
+        }
+
+        /// <summary>
+        /// Callback for when the async worker is complete
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void CopyWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            _copyProgressForm.Close();
+            if ((bool)e.Result)
+            {
+                UpdateGridData();
+            }
+        }
+
+        /// <summary>
+        /// Show scroll bars on the help text box when needed.
+        /// </summary>
+        /// <param name="sender">The control that sent this event</param>
+        /// <param name="e">The event information that triggered this call</param>
+        private void helpTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (helpTextBox.Lines.Count() > 7)
+            {
+                helpTextBox.ScrollBars = ScrollBars.Vertical;
+            }
+            else
+            {
+                helpTextBox.ScrollBars = ScrollBars.None;
+            }
         }
     }
 }

@@ -404,10 +404,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Check\CheckAndFixItem.cs" />
     <Compile Include="Check\CheckAndFixRunner.cs" />
     <Compile Include="Check\CheckArea.cs" />
+    <Compile Include="Check\CheckGroup.cs" />
+    <Compile Include="Check\CheckGroupDTO.cs" />
     <Compile Include="Check\CheckResultItem.cs" />
     <Compile Include="Check\CheckRunContext.cs" />
     <Compile Include="Check\CheckAndFixException.cs" />
     <Compile Include="Check\ICheckAndFixRunner.cs" />
+    <Compile Include="Check\IRunnable.cs" />
     <Compile Include="Check\ITextCheck.cs" />
     <Compile Include="Check\LocalCheckAndFixManager.cs" />
     <Compile Include="Check\TextCheckRunner.cs" />
@@ -429,12 +432,24 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <Compile Include="Forms\CheckResultsForm.Designer.cs">
       <DependentUpon>CheckResultsForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\DisplayItem.cs" />
+    <Compile Include="Forms\ChooseRepositoryForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\ChooseRepositoryForm.Designer.cs">
+      <DependentUpon>ChooseRepositoryForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\GridRowData.cs" />
     <Compile Include="Forms\GenericProgressForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\GenericProgressForm.Designer.cs">
       <DependentUpon>GenericProgressForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\GroupEditorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\GroupEditorForm.Designer.cs">
+      <DependentUpon>GroupEditorForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\LicenseForm.cs">
       <SubType>Form</SubType>
@@ -517,11 +532,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <DependentUpon>CheckEditor.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <EmbeddedResource Include="Forms\ChooseRepositoryForm.resx">
+      <DependentUpon>ChooseRepositoryForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\GenericProgressForm.resx">
       <DependentUpon>GenericProgressForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\CheckResultsForm.resx">
       <DependentUpon>CheckResultsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\GroupEditorForm.resx">
+      <DependentUpon>GroupEditorForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\LicenseForm.resx">
       <DependentUpon>LicenseForm.cs</DependentUpon>
